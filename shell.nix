@@ -31,5 +31,5 @@ let
     };
   };};
 in
-(python.withPackages (ps: with ps; [ black pymc3 matplotlib numpy jupyter SALib ])).env
+(python.withPackages (ps: with ps; [ black flake8 pymc3 matplotlib numpy jupyter SALib ])).env
 

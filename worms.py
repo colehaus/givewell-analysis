@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import math
 from utility import present_value_of_annuity
 
 deworming_staff_aggregates = {

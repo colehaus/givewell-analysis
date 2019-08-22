@@ -16,6 +16,7 @@ staff_aggregates = {
 
 
 def cash_transfers(
+    average_household_size,
     percentage_of_transfers_invested,
     return_on_investment,
     baseline_annual_consumption_per_capita,
