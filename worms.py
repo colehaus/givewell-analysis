@@ -15,6 +15,7 @@ deworming_staff_aggregates = {
     "additional_years_of_treatment_assigned_to_treatment_group_from_MK": 1.69,
 }
 
+
 def long_term_income_effects(
     treatment_effect_on_ln_income_in_MK_study_population,
     discount_rate,
@@ -96,7 +97,13 @@ def charity_specific(
     )
     return value_per_dollar_after_accounting_for_leverage_and_funging
 
+
 def combined(**kwargs):
-    adjusted_benefits_per_year_of_deworming = utility.call_with_only_required_arguments(long_term_income_effects, kwargs)
-    args = { "adjusted_benefits_per_year_of_deworming": adjusted_benefits_per_year_of_deworming, **kwargs}
+    adjusted_benefits_per_year_of_deworming = utility.call_with_only_required_arguments(
+        long_term_income_effects, kwargs
+    )
+    args = {
+        "adjusted_benefits_per_year_of_deworming": adjusted_benefits_per_year_of_deworming,
+        **kwargs,
+    }
     return utility.call_with_only_required_arguments(charity_specific, args)
