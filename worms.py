@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from utility import present_value_of_annuity
+import pymc3 as pm
 
 deworming_staff_aggregates = {
     "treatment_effect_on_ln_income_in_MK_study_population": 0.143,
@@ -12,7 +13,6 @@ deworming_staff_aggregates = {
     "replicability_adjustment_for_deworming": 0.11,
     "additional_years_of_treatment_assigned_to_treatment_group_from_MK": 1.69,
 }
-
 
 def long_term_income_effects(
     treatment_effect_on_ln_income_in_MK_study_population,
