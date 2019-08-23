@@ -2,7 +2,6 @@
 
 import utility
 from utility import present_value_of_annuity
-import pymc3 as pm
 
 deworming_staff_aggregates = {
     "treatment_effect_on_ln_income_in_MK_study_population": 0.143,
@@ -19,7 +18,7 @@ deworming_staff_aggregates = {
 def long_term_income_effects(
     treatment_effect_on_ln_income_in_MK_study_population,
     discount_rate,
-    average_num_of_years_between_deworming_and_beginning_of_benefits,  # TODO
+    average_num_of_years_between_deworming_and_beginning_of_benefits,
     duration_of_benefits_of_deworming,
     multiplier_for_resource_sharing_within_households,
     adjustment_for_el_nino,

@@ -74,7 +74,8 @@ def cash_transfers(
         1 - discount_from_negative_spillover
     ) * total_present_value_of_cash_transfer
     increase_in_ln_consumption_for_each_dollar_donated = (
-        total_present_value_of_cash_transfer * transfer_as_percentage_of_total_cost
+        total_present_value_of_cash_transfer_accounting_for_spillovers
+        * transfer_as_percentage_of_total_cost
     ) / size_of_transfer_per_person
     value_per_dollar_donated = (
         increase_in_ln_consumption_for_each_dollar_donated

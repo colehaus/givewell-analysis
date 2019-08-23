@@ -61,7 +61,7 @@ def run_sensitivity_analysis(parameters, model_calculation, num_samples):
         except AttributeError:
             return x
 
-    problem = parameters_to_sa_problem(parameters)
+    problem = parameters_to_sensitivity_analysis_problem(parameters)
     param_values = saltelli.sample(problem, num_samples, calc_second_order=False)
     Y = np.array(
         [
@@ -137,7 +137,7 @@ def sensitivity_analysis_to_dataframe(sa, parameters):
 
 
 def plot_sensitivity_analysis(sa, parameters):
-    S1, ST = sa_to_dataframe(sa, parameters)
+    S1, ST = sensitivity_analysis_to_dataframe(sa, parameters)
     plt.figure()
     sns.pointplot(x="sensitivity", y="variable", data=S1, join=False)
     plt.figure()
