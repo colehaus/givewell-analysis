@@ -11,6 +11,7 @@ import pandas
 import scipy
 import inspect
 import seaborn as sns
+import itertools
 
 LogNormal = collections.namedtuple("LogNormal", "mu sd")
 
@@ -33,9 +34,11 @@ def parameters_to_distribution(model, parameters):
 
     def inner(k, v):
         try:
-            return model.__getitem__(k)
-        except KeyError:
             return parameter_name_to_constructor(v)(k, **v._asdict())
+        except ValueError:
+            return model.__getitem__(k)
+        except AssertionError:
+            return model.__getitem__(k)
 
     with model:
         return {k: inner(k, v) for k, v in parameters.items()}
@@ -53,14 +56,15 @@ def parameters_to_sensitivity_analysis_problem(parameters):
     }
 
 
+def try_eval(x):
+    try:
+        return x.eval()
+    except AttributeError:
+        return x
+
+
 def run_sensitivity_analysis(parameters, model_calculation, num_samples):
     # Some calculations return TF values even when given ordinary numbers because of the use of pymc3.math
-    def try_eval(x):
-        try:
-            return x.eval()
-        except AttributeError:
-            return x
-
     problem = parameters_to_sensitivity_analysis_problem(parameters)
     param_values = saltelli.sample(problem, num_samples, calc_second_order=False)
     Y = np.array(
@@ -85,15 +89,17 @@ def register_rvs(model, parameters, calculation_name, model_calculation):
         return pm.Deterministic(calculation_name, model_calculation(**rvs))
 
 
-def givewell_to_params(nums, percent):
+def number_to_log_normal_params(num, percent):
+    return log_normal_params_from_90_percent_ci(**create_bounds(num, percent)._asdict())
+
+
+def numbers_to_log_normal_params(params, percent):
     return {
-        k: log_normal_params_from_90_percent_ci(**create_bounds(v, percent)._asdict())
-        for k, v in nums.items()
+        k: numbers_to_log_normal_params(v, percent)
+        if type(v) is dict
+        else number_to_log_normal_params(v, percent)
+        for k, v in params.items()
     }
-
-
-def all_givewell_to_params(nums, percent):
-    return {k: givewell_to_params(v, percent) for k, v in nums.items()}
 
 
 def call_with_only_required_arguments(fn, d):
@@ -142,3 +148,24 @@ def plot_sensitivity_analysis(sa, parameters):
     sns.pointplot(x="sensitivity", y="variable", data=S1, join=False)
     plt.figure()
     sns.pointplot(x="sensitivity", y="variable", data=ST, join=False)
+
+
+def merge_dicts(dicts, no_clobber=True):
+    if no_clobber:
+        keys = list(itertools.chain.from_iterable([d.keys() for d in dicts]))
+        if len(keys) is not len(list(set(keys))):
+            raise AssertionError(
+                "Duplicate keys in dictionary merge: " + str(keys.sort())
+            )
+    return dict(collections.ChainMap(*dicts))
+
+
+def flatten_lists(lists):
+    return list(itertools.chain.from_iterable(lists))
+
+
+def unions(sets):
+    accum = set()
+    for s in sets:
+        accum = accum.union(s)
+    return accum
