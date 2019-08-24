@@ -122,6 +122,14 @@ models = {
 }
 
 
+def trim_prefix(key):
+    parts = key.partition(": ")
+    if parts[1] is ": ":
+        return parts[2]
+    else:
+        return key
+
+
 def register_calculations(model_context, fn, argsList):
     def inner(k, v):
         try:
@@ -134,7 +142,8 @@ def register_calculations(model_context, fn, argsList):
     argsListMunged = [
         arg.calculation if type(arg) is Model else arg for arg in argsList
     ]
-    args = utility.merge_dicts(argsListMunged)
+    # For different deworming charities, we call the same code with different parameters. We make the parameters unique in the pymc3 computation graph with a per-charity prefix which we strip when actually calling the python code.
+    args = {trim_prefix(k): v for k, v in utility.merge_dicts(argsListMunged).items()}
     with model_context:
         return {
             k: inner(k, v)

@@ -50,27 +50,27 @@ def long_term_income_effects(
 
 
 dtw_givewell = {
-    "worm_intensity_adjustment": 0.12,
-    "cost_per_capita_per_annum": 0.61,
-    "total_additional_expected_value_from_leverage_and_funging": 0.71,
+    "DTW: worm_intensity_adjustment": 0.12,
+    "DTW: cost_per_capita_per_annum": 0.61,
+    "DTW: total_additional_expected_value_from_leverage_and_funging": 0.71,
 }
 
 sci_givewell = {
-    "worm_intensity_adjustment": 0.09,
-    "cost_per_capita_per_annum": 0.99,
-    "total_additional_expected_value_from_leverage_and_funging": 1.31,
+    "SCI: worm_intensity_adjustment": 0.09,
+    "SCI: cost_per_capita_per_annum": 0.99,
+    "SCI: total_additional_expected_value_from_leverage_and_funging": 1.31,
 }
 
 sightsavers_givewell = {
-    "worm_intensity_adjustment": 0.09,
-    "cost_per_capita_per_annum": 0.95,
-    "total_additional_expected_value_from_leverage_and_funging": 0.91,
+    "SS: worm_intensity_adjustment": 0.09,
+    "SS: cost_per_capita_per_annum": 0.95,
+    "SS: total_additional_expected_value_from_leverage_and_funging": 0.91,
 }
 
 end_givewell = {
-    "worm_intensity_adjustment": 0.07,
-    "cost_per_capita_per_annum": 0.81,
-    "total_additional_expected_value_from_leverage_and_funging": 0.39,
+    "END: worm_intensity_adjustment": 0.07,
+    "END: cost_per_capita_per_annum": 0.81,
+    "END: total_additional_expected_value_from_leverage_and_funging": 0.39,
 }
 
 
