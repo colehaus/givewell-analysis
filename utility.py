@@ -85,15 +85,15 @@ def register_rvs(model, parameters, calculation_name, model_calculation):
         return pm.Deterministic(calculation_name, model_calculation(**rvs))
 
 
-def staff_aggregates_to_params(nums, percent):
+def givewell_to_params(nums, percent):
     return {
         k: log_normal_params_from_90_percent_ci(**create_bounds(v, percent)._asdict())
         for k, v in nums.items()
     }
 
 
-def all_staff_aggregates_to_params(nums, percent):
-    return {k: staff_aggregates_to_params(v, percent) for k, v in nums.items()}
+def all_givewell_to_params(nums, percent):
+    return {k: givewell_to_params(v, percent) for k, v in nums.items()}
 
 
 def call_with_only_required_arguments(fn, d):

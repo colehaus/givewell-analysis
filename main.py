@@ -11,13 +11,13 @@ import seaborn as sns
 sns.set(style="darkgrid")
 
 params = {
-    "moral weights": moral_weights.staff_aggregates,
-    "GiveDirectly": cash.staff_aggregates,
-    "deworming": worms.deworming_staff_aggregates,
-    "END": worms.end_staff_aggregates,
-    "DTW": worms.dtw_staff_aggregates,
-    "SCI": worms.sci_staff_aggregates,
-    "Sightsavers": worms.sightsavers_staff_aggregates,
+    "moral weights": moral_weights.givewell,
+    "GiveDirectly": cash.givewell,
+    "deworming": worms.deworming_givewell,
+    "END": worms.end_givewell,
+    "DTW": worms.dtw_givewell,
+    "SCI": worms.sci_givewell,
+    "Sightsavers": worms.sightsavers_givewell,
 }
 
 Model = collections.namedtuple("Model", "calculation parameters")
@@ -39,14 +39,15 @@ def main(parameters):
         charities[k] = utility.register_rvs(model, params, k, v.calculation)
 
     with model:
-        trace = pm.sample(2000)
+        trace = pm.sample(1)
     frame = pm.trace_to_dataframe(trace)
+    print(pm.summary(trace))
 
     pm.plot_posterior(trace, varnames=models.keys(), kde_plot=True)
 
     for k, v in models.items():
         params = dict(collections.ChainMap(*[parameters[p] for p in v.parameters]))
-        sa = utility.run_sensitivity_analysis(params, v.calculation, 20)
+        sa = utility.run_sensitivity_analysis(params, v.calculation, 1)
         utility.plot_sensitivity_analysis(sa, params)
         for i in params.keys():
             sns.jointplot(i, k, data=frame, kind="reg")

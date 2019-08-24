@@ -3,7 +3,7 @@
 from pymc3 import math
 from utility import present_value_of_annuity
 
-staff_aggregates = {
+cash_transfers_givewell = {
     "average_household_size": 4.7,
     "percentage_of_transfers_invested": 0.39,
     "return_on_investment": 0.1,
@@ -81,4 +81,4 @@ def cash_transfers(
         increase_in_ln_consumption_for_each_dollar_donated
         * value_of_increasing_ln_consumption_per_capita_per_annum
     )
-    return value_per_dollar_donated
+    return {"value_per_dollar_donated": value_per_dollar_donated}

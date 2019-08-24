@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
 import utility
-from utility import present_value_of_annuity
 
-deworming_staff_aggregates = {
+long_term_income_effects_givewell = {
     "treatment_effect_on_ln_income_in_MK_study_population": 0.143,
     "average_num_of_years_between_deworming_and_beginning_of_benefits": 8,
     "duration_of_benefits_of_deworming": 40,
@@ -34,7 +33,7 @@ def long_term_income_effects(
             ** average_num_of_years_between_deworming_and_beginning_of_benefits
         )
     )
-    present_value_of_lifetime_benefits_from_year_of_deworming = present_value_of_annuity(  # TODO: end of period
+    present_value_of_lifetime_benefits_from_year_of_deworming = utility.present_value_of_annuity(  # TODO: end of period
         discount_rate, duration_of_benefits_of_deworming, benefit_on_one_years_income
     )
     adjusted_benefits_per_year_of_deworming = (
@@ -45,28 +44,30 @@ def long_term_income_effects(
         * replicability_adjustment_for_deworming
         / additional_years_of_treatment_assigned_to_treatment_group_from_MK
     )
-    return adjusted_benefits_per_year_of_deworming
+    return {
+        "adjusted_benefits_per_year_of_deworming": adjusted_benefits_per_year_of_deworming
+    }
 
 
-dtw_staff_aggregates = {
+dtw_givewell = {
     "worm_intensity_adjustment": 0.12,
     "cost_per_capita_per_annum": 0.61,
     "total_additional_expected_value_from_leverage_and_funging": 0.71,
 }
 
-sci_staff_aggregates = {
+sci_givewell = {
     "worm_intensity_adjustment": 0.09,
     "cost_per_capita_per_annum": 0.99,
     "total_additional_expected_value_from_leverage_and_funging": 1.31,
 }
 
-sightsavers_staff_aggregates = {
+sightsavers_givewell = {
     "worm_intensity_adjustment": 0.09,
     "cost_per_capita_per_annum": 0.95,
     "total_additional_expected_value_from_leverage_and_funging": 0.91,
 }
 
-end_staff_aggregates = {
+end_givewell = {
     "worm_intensity_adjustment": 0.07,
     "cost_per_capita_per_annum": 0.81,
     "total_additional_expected_value_from_leverage_and_funging": 0.39,
@@ -94,7 +95,9 @@ def charity_specific(
     value_per_dollar_after_accounting_for_leverage_and_funging = value_per_dollar * (
         1 + total_additional_expected_value_from_leverage_and_funging
     )
-    return value_per_dollar_after_accounting_for_leverage_and_funging
+    return {
+        "value_per_dollar_after_accounting_for_leverage_and_funging": value_per_dollar_after_accounting_for_leverage_and_funging
+    }
 
 
 def combined(**kwargs):
