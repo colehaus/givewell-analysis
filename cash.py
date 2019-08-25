@@ -4,14 +4,14 @@ from pymc3 import math
 from utility import present_value_of_annuity
 
 cash_transfers_givewell = {
-    "average_household_size": 4.7,
-    "percentage_of_transfers_invested": 0.39,
-    "return_on_investment": 0.1,
-    "baseline_annual_consumption_per_capita": 285.92,
-    "duration_of_investment_benefits": 15,
-    "percent_of_investment_returned_when_benefits_end": 0.2,
-    "discount_from_negative_spillover": 0.05,
-    "transfer_as_percentage_of_total_cost": 0.83,
+    "Cash: average_household_size": 4.7,
+    "Cash: percentage_of_transfers_invested": 0.39,
+    "Cash: return_on_investment": 0.1,
+    "Cash: baseline_annual_consumption_per_capita": 285.92,
+    "Cash: duration_of_investment_benefits": 15,
+    "Cash: percent_of_investment_returned_when_benefits_end": 0.2,
+    "Cash: discount_from_negative_spillover": 0.05,
+    "Cash: transfer_as_percentage_of_total_cost": 0.83,
 }
 
 
@@ -81,4 +81,4 @@ def cash_transfers(
         increase_in_ln_consumption_for_each_dollar_donated
         * value_of_increasing_ln_consumption_per_capita_per_annum
     )
-    return {"value_per_dollar_donated": value_per_dollar_donated}
+    return {"Cash: value_per_dollar_donated": value_per_dollar_donated}

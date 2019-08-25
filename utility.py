@@ -28,19 +28,17 @@ def log_normal_params_from_90_percent_ci(lo, hi):
     return LogNormal(mu, sd)
 
 
-def parameters_to_distribution(model, parameters):
+def parameters_to_distribution(model_context, parameters):
     def parameter_name_to_constructor(p):
         return {"LogNormal": pm.Lognormal}[type(p).__name__]
 
     def inner(k, v):
         try:
+            return model_context.__getitem__(k)
+        except KeyError:
             return parameter_name_to_constructor(v)(k, **v._asdict())
-        except ValueError:
-            return model.__getitem__(k)
-        except AssertionError:
-            return model.__getitem__(k)
 
-    with model:
+    with model_context:
         return {k: inner(k, v) for k, v in parameters.items()}
 
 
@@ -153,7 +151,7 @@ def plot_sensitivity_analysis(sa, parameters):
 def merge_dicts(dicts, no_clobber=True):
     if no_clobber:
         keys = list(itertools.chain.from_iterable([d.keys() for d in dicts]))
-        if len(keys) is not len(list(set(keys))):
+        if len(keys) != len(list(set(keys))):
             raise AssertionError(
                 "Duplicate keys in dictionary merge: " + str(keys.sort())
             )
@@ -169,3 +167,15 @@ def unions(sets):
     for s in sets:
         accum = accum.union(s)
     return accum
+
+
+def extract_only_value(d):
+    vals = d.values()
+    if len(vals) == 1:
+        return list(vals)[0]
+    else:
+        raise AssertionError("Not just a single value in dict")
+
+
+def keys_sorted_by_value(d):
+    return [k for k, v in sorted(d.items(), key=lambda x: x[1])]

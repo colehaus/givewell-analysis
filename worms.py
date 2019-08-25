@@ -3,14 +3,14 @@
 import utility
 
 long_term_income_effects_givewell = {
-    "treatment_effect_on_ln_income_in_MK_study_population": 0.143,
-    "average_num_of_years_between_deworming_and_beginning_of_benefits": 8,
-    "duration_of_benefits_of_deworming": 40,
-    "multiplier_for_resource_sharing_within_households": 2.0,
-    "adjustment_for_el_nino": 0.65,
-    "adjustment_for_years_of_treatment_in_MK_vs_charities_programs": 0.90,
-    "replicability_adjustment_for_deworming": 0.11,
-    "additional_years_of_treatment_assigned_to_treatment_group_from_MK": 1.69,
+    "Deworming: treatment_effect_on_ln_income_in_MK_study_population": 0.143,
+    "Deworming: average_num_of_years_between_deworming_and_beginning_of_benefits": 8,
+    "Deworming: duration_of_benefits_of_deworming": 40,
+    "Deworming: multiplier_for_resource_sharing_within_households": 2.0,
+    "Deworming: adjustment_for_el_nino": 0.65,
+    "Deworming: adjustment_for_years_of_treatment_in_MK_vs_charities_programs": 0.90,
+    "Deworming: replicability_adjustment_for_deworming": 0.11,
+    "Deworming: additional_years_of_treatment_assigned_to_treatment_group_from_MK": 1.69,
 }
 
 
@@ -45,7 +45,7 @@ def long_term_income_effects(
         / additional_years_of_treatment_assigned_to_treatment_group_from_MK
     )
     return {
-        "adjusted_benefits_per_year_of_deworming": adjusted_benefits_per_year_of_deworming
+        "Deworming: adjusted_benefits_per_year_of_deworming": adjusted_benefits_per_year_of_deworming
     }
 
 
@@ -75,6 +75,7 @@ end_givewell = {
 
 
 def charity_specific(
+    name,
     adjusted_benefits_per_year_of_deworming,
     worm_intensity_adjustment,
     value_of_increasing_ln_consumption_per_capita_per_annum,
@@ -96,16 +97,6 @@ def charity_specific(
         1 + total_additional_expected_value_from_leverage_and_funging
     )
     return {
-        "value_per_dollar_after_accounting_for_leverage_and_funging": value_per_dollar_after_accounting_for_leverage_and_funging
+        name
+        + ": value_per_dollar_after_accounting_for_leverage_and_funging": value_per_dollar_after_accounting_for_leverage_and_funging
     }
-
-
-def combined(**kwargs):
-    adjusted_benefits_per_year_of_deworming = utility.call_with_only_required_arguments(
-        long_term_income_effects, kwargs
-    )
-    args = {
-        "adjusted_benefits_per_year_of_deworming": adjusted_benefits_per_year_of_deworming,
-        **kwargs,
-    }
-    return utility.call_with_only_required_arguments(charity_specific, args)

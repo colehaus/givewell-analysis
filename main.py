@@ -10,6 +10,8 @@ import pymc3 as pm
 import seaborn as sns
 import functools
 from functools import partial
+import distance
+import numpy as np
 
 sns.set(style="darkgrid")
 
@@ -63,22 +65,22 @@ worms_long_term_income_effects = Model(
     worms.long_term_income_effects, [["Moral weights"], ["Deworming", "Income effects"]]
 )
 
-models2 = {
+models = {
     "GiveDirectly": Model(cash.cash_transfers, [["Moral weights"], ["GiveDirectly"]]),
     "END": Model(
-        worms.charity_specific,
+        partial(worms.charity_specific, "END"),
         [["Moral weights"], ["Deworming", "END"], worms_long_term_income_effects],
     ),
     "DTW": Model(
-        worms.charity_specific,
+        partial(worms.charity_specific, "DTW"),
         [["Moral weights"], ["Deworming", "DTW"], worms_long_term_income_effects],
     ),
     "SCI": Model(
-        worms.charity_specific,
+        partial(worms.charity_specific, "SCI"),
         [["Moral weights"], ["Deworming", "SCI"], worms_long_term_income_effects],
     ),
     "Sightsavers": Model(
-        worms.charity_specific,
+        partial(worms.charity_specific, "Sightsavers"),
         [
             ["Moral weights"],
             ["Deworming", "Sightsavers"],
@@ -113,14 +115,6 @@ models2 = {
     ),
 }
 
-models = {
-    "GiveDirectly": Model(cash.cash_transfers, ["Moral weights", "GiveDirectly"]),
-    "END": Model(worms.combined, ["Moral weights", "Deworming", "END"]),
-    "DTW": Model(worms.combined, ["Moral weights", "Deworming", "DTW"]),
-    "SCI": Model(worms.combined, ["Moral weights", "Deworming", "SCI"]),
-    "Sightsavers": Model(worms.combined, ["Moral weights", "Deworming", "Sightsavers"]),
-}
-
 
 def trim_prefix(key):
     parts = key.partition(": ")
@@ -130,20 +124,19 @@ def trim_prefix(key):
         return key
 
 
+# TODO: Audit duplicate variables
 def register_calculations(model_context, fn, argsList):
     def inner(k, v):
         try:
+            return model_context.__getitem__(k)
+        except KeyError:
             return pm.Deterministic(k, v)
-        except ValueError:
-            return model_context.__getitem__(k)
-        except AssertionError:
-            return model_context.__getitem__(k)
 
     argsListMunged = [
         arg.calculation if type(arg) is Model else arg for arg in argsList
     ]
     # For different deworming charities, we call the same code with different parameters. We make the parameters unique in the pymc3 computation graph with a per-charity prefix which we strip when actually calling the python code.
-    args = {trim_prefix(k): v for k, v in utility.merge_dicts(argsListMunged).items()}
+    args = {trim_prefix(k).replace(" ", "_"): v for k, v in utility.merge_dicts(argsListMunged).items()}
     with model_context:
         return {
             k: inner(k, v)
@@ -250,10 +243,7 @@ ChartSpec = collections.namedtuple("ChartSpec", "ins outs")
 
 
 def big_step_chart_spec(model):
-    primitive_params = cata(
-        partial(apply_if_model, lambda fn, args: utility.unions(args)), model
-    )
-    return ChartSpec(primitive_params, set(model.calculation))
+    return ChartSpec(all_inputs_from_model(model), set(model.calculation))
 
 
 def small_step_chart_specs(model):
@@ -277,6 +267,53 @@ def eval_model(model, params):
     return cata(partial(apply_if_model, apply_fn_to_arg_list), model_with_params)
 
 
+# We compute these from the trace instead of registering them in the model because pmyc3/theano doesn't like some of the operations we have to perform during the computation.
+def compute_distances(models, trace):
+    result_traces = {k: trace[v] for k, v in top_level_results(models).items()}
+    runs = np.transpose([v for k, v in sorted(result_traces.items())])
+
+    reference_vector = [v for k, v in sorted(distance.value_per_dollar.items())]
+    angles = [distance.angle_between(reference_vector, run) for run in runs]
+
+    vector_keys = [k for k, v in sorted(distance.value_per_dollar.items())]
+    run_rankings = [
+        utility.keys_sorted_by_value(dict(zip(vector_keys, run))) for run in runs
+    ]
+    taus = [
+        distance.kendall_tau(distance.ranked_list, ranking) for ranking in run_rankings
+    ]
+    footrules = [
+        distance.spearman_footrule(distance.ranked_list, ranking)
+        for ranking in run_rankings
+    ]
+
+    return angles, taus, footrules
+
+def all_outputs_from_model(model):
+    def inner(piece):
+        if type(piece) is Model:
+            fn, args = piece
+            return utility.unions(args).union(set(fn))
+        else:
+            return set()
+    return cata(inner, model)
+
+
+def all_inputs_from_model(model):
+    return cata(
+        partial(apply_if_model, lambda fn, args: utility.unions(args)), model
+    )
+
+def all_inputs_from_models(models):
+    return functools.reduce(lambda acc, x: acc.union(all_inputs_from_model(x)), models.values(), set())
+
+
+def top_level_results(models):
+    return {
+        k: utility.extract_only_value(model.calculation) for k, model in models.items()
+    }
+
+
 def test():
     print(
         {
@@ -284,14 +321,14 @@ def test():
                 result_name: utility.try_eval(result)
                 for result_name, result in eval_model(model, givewell).items()
             }
-            for model_name, model in models2.items()
+            for model_name, model in models.items()
         }
     )
 
 
 def main(parameters):
     model = pm.Model()
-    for k, v in models2.items():
+    for k, v in models.items():
         cata(register, tree)
 
     # with model:

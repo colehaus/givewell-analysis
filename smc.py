@@ -4,19 +4,19 @@ import utility
 from pymc3 import math
 
 smc_givewell = {
-    "cost_per_child_targeted": 4.536588,
-    "proportion_of_annual_direct_malaria_mortality_occuring_in_high_transmission_season": 0.7,
-    "internal_validity_adjustment_SMC": 0.95,
-    "external_validity_adjustment_SMC": 1.00,
-    "unadjusted_expected_reduction_in_malaria_cases_in_untreated_population_as_percentage_of_reduction_in_treated_population": 0.43,
-    "adjustment_to_account_for_higher_proportion_of_people_being_covered_in_trial_than_ACCESS_SMC": 0.31,
+    "SMC: cost_per_child_targeted": 4.536588,
+    "SMC: proportion_of_annual_direct_malaria_mortality_occuring_in_high_transmission_season": 0.7,
+    "SMC: internal_validity_adjustment_SMC": 0.95,
+    "SMC: external_validity_adjustment_SMC": 1.00,
+    "SMC: unadjusted_expected_reduction_in_malaria_cases_in_untreated_population_as_percentage_of_reduction_in_treated_population": 0.43,
+    "SMC: adjustment_to_account_for_higher_proportion_of_people_being_covered_in_trial_than_ACCESS_SMC": 0.31,
 }
 
 adherence_adjustment_givewell = {
-    "percent_of_first_doses_that_arent_directly_observed": 0.30,
-    "adherence_rate_to_first_doses_that_arent_directly_observed": 0.84,
-    "adherence_rate_to_second_and_third_doses": 0.84,
-    "reduction_in_efficacy_from_non_adherence_to_2nd_and_3rd_doses": 0.50,
+    "SMC: percent_of_first_doses_that_arent_directly_observed": 0.30,
+    "SMC: adherence_rate_to_first_doses_that_arent_directly_observed": 0.84,
+    "SMC: adherence_rate_to_second_and_third_doses": 0.84,
+    "SMC: reduction_in_efficacy_from_non_adherence_to_2nd_and_3rd_doses": 0.50,
 }
 
 
@@ -38,15 +38,15 @@ def adherence_adjustment(
             * reduction_in_efficacy_from_non_adherence_to_2nd_and_3rd_doses
         )
     )
-    return {"overall_adherence_adjustment": overall_adherence_adjustment}
+    return {"SMC: overall_adherence_adjustment": overall_adherence_adjustment}
 
 
 coverage_adjustment_givewell = {
-    "percent_of_targeted_children_who_received_at_least_1_round_of_treatment": 0.92,
-    "percent_of_targeted_children_who_received_at_least_2_rounds_of_treatment": 0.83,
-    "percent_of_targeted_children_who_received_at_least_3_rounds_of_treatment": 0.71,
-    "percent_of_targeted_children_who_received_all_4_rounds_of_treatment": 0.55,
-    "estimated_coverage_in_trials_considered_in_givewells_meta_analysis": 0.90,
+    "SMC: percent_of_targeted_children_who_received_at_least_1_round_of_treatment": 0.92,
+    "SMC: percent_of_targeted_children_who_received_at_least_2_rounds_of_treatment": 0.83,
+    "SMC: percent_of_targeted_children_who_received_at_least_3_rounds_of_treatment": 0.71,
+    "SMC: percent_of_targeted_children_who_received_all_4_rounds_of_treatment": 0.55,
+    "SMC: estimated_coverage_in_trials_considered_in_givewells_meta_analysis": 0.90,
 }
 
 
@@ -81,12 +81,12 @@ def coverage_adjustment(
         / estimated_coverage_in_trials_considered_in_givewells_meta_analysis
     )
     return {
-        "coverage_in_ACCESS_SMC_program_relative_to_coverage_in_RCTs": coverage_in_ACCESS_SMC_program_relative_to_coverage_in_RCTs
+        "SMC: coverage_in_ACCESS_SMC_program_relative_to_coverage_in_RCTs": coverage_in_ACCESS_SMC_program_relative_to_coverage_in_RCTs
     }
 
 
 smc_effectiveness_givewell = {
-    "relative_risk_for_malaria_cases_intention_to_treat_effect": 0.25
+    "SMC: relative_risk_for_malaria_cases_intention_to_treat_effect": 0.25
 }
 
 
@@ -107,7 +107,7 @@ def smc_effectiveness(
         * total_adjustment_to_meta_analysis_finding_due_to_imperfect_adherence_and_coverage
     )
     return {
-        "expected_reduction_in_malaria_cases_after_adherence_and_coverage_adjustments": expected_reduction_in_malaria_cases_after_adherence_and_coverage_adjustments
+        "SMC: expected_reduction_in_malaria_cases_after_adherence_and_coverage_adjustments": expected_reduction_in_malaria_cases_after_adherence_and_coverage_adjustments
     }
 
 
@@ -115,16 +115,16 @@ def costs(cost_per_child_targeted):
     cost_to_cover_hypothetical_cohort = (
         cost_per_child_targeted * hypothetical_cohort_size
     )
-    return {"cost_to_cover_hypothetical_cohort": cost_to_cover_hypothetical_cohort}
+    return {"SMC: cost_to_cover_hypothetical_cohort": cost_to_cover_hypothetical_cohort}
 
 
 hypothetical_cohort_size = 1000000
 
 treated_population_givewell = {
-    "young_all_cause_mortality_per_1000_per_annum": 14.2,
-    "percent_of_young_deaths_due_to_malaria": 0.27,
-    "ratio_of_indirect_to_direct_malaria_deaths": 0.5,
-    "ratio_of_reduction_in_malaria_mortality_to_reduction_in_malaria_incidence": 1.0,
+    "SMC: young_all_cause_mortality_per_1000_per_annum": 14.2,
+    "SMC: percent_of_young_deaths_due_to_malaria": 0.27,
+    "SMC: ratio_of_indirect_to_direct_malaria_deaths": 0.5,
+    "SMC: ratio_of_reduction_in_malaria_mortality_to_reduction_in_malaria_incidence": 1.0,
 }
 
 
@@ -173,13 +173,13 @@ def mortality_reduction_in_treated_population(
         / cost_per_young_death_averted_before_accounting_for_leveraging_and_funging
     )
     return {
-        "number_of_malaria_attributable_deaths_prevented_per_1000_under_5s_targeted_prior_to_adjustments": number_of_malaria_attributable_deaths_prevented_per_1000_under_5s_targeted_prior_to_adjustments,
-        "value_from_under_5_deaths_averted_per_dollar_before_accounting_for_leverage_and_funging": value_from_under_5_deaths_averted_per_dollar_before_accounting_for_leverage_and_funging,
+        "SMC: number_of_malaria_attributable_deaths_prevented_per_1000_under_5s_targeted_prior_to_adjustments": number_of_malaria_attributable_deaths_prevented_per_1000_under_5s_targeted_prior_to_adjustments,
+        "SMC: value_from_under_5_deaths_averted_per_dollar_before_accounting_for_leverage_and_funging": value_from_under_5_deaths_averted_per_dollar_before_accounting_for_leverage_and_funging,
     }
 
 
 untreated_population_givewell = {
-    "ratio_of_malaria_deaths_at_all_ages_to_malaria_deaths_in_young": 1.34
+    "SMC: ratio_of_malaria_deaths_at_all_ages_to_malaria_deaths_in_young": 1.34
 }
 
 
@@ -219,18 +219,18 @@ def mortality_reduction_in_untreated_population(
     )
 
     return {
-        "value_from_over_5_deaths_averted_for_each_dollar_donated_before_accounting_for_leverage_and_funging": value_from_over_5_deaths_averted_for_each_dollar_donated_before_accounting_for_leverage_and_funging
+        "SMC: value_from_over_5_deaths_averted_for_each_dollar_donated_before_accounting_for_leverage_and_funging": value_from_over_5_deaths_averted_for_each_dollar_donated_before_accounting_for_leverage_and_funging
     }
 
 
 income_increase_ages_14_and_under_givewell = {
-    "malaria_prevalance_young": 0.29,
-    "malaria_prevalence_old": 0.29,
-    "increase_in_income_from_reducing_point_in_time_probability_of_malaria_infection_from_100_to_0_for_individual_for_one_year_between_ages_of_0_and_14": 0.023,
-    "additional_replicability_adjustment_for_relationship_between_malaria_and_income": 0.52,
-    "average_number_of_years_between_program_implementation_and_beginning_of_long_term_benefits": 10,
-    "duration_of_long_term_benefits_of_SMC": 40,
-    "multiplier_for_resource_sharing_within_households": 2,
+    "SMC: malaria_prevalance_young": 0.29,
+    "SMC: malaria_prevalence_old": 0.29,
+    "SMC: increase_in_income_from_reducing_point_in_time_probability_of_malaria_infection_from_100_to_0_for_individual_for_one_year_between_ages_of_0_and_14": 0.023,
+    "SMC: additional_replicability_adjustment_for_relationship_between_malaria_and_income": 0.52,
+    "SMC: average_number_of_years_between_program_implementation_and_beginning_of_long_term_benefits": 10,
+    "SMC: duration_of_long_term_benefits_of_SMC": 40,
+    "SMC: multiplier_for_resource_sharing_within_households": 2,
 }
 
 
@@ -320,12 +320,12 @@ def income_increases_age_14_and_under(
         / (cost_per_child_targeted * 1000)
     )
     return {
-        "value_from_development_benefits_per_dollar_before_accounting_for_leverage_and_funging": value_from_development_benefits_per_dollar_before_accounting_for_leverage_and_funging
+        "SMC: value_from_development_benefits_per_dollar_before_accounting_for_leverage_and_funging": value_from_development_benefits_per_dollar_before_accounting_for_leverage_and_funging
     }
 
 
 results_givewell = {
-    "total_additional_expected_cost_from_leverage_and_funging_SMC": 0.1074
+    "SMC: total_additional_expected_cost_from_leverage_and_funging_SMC": 0.1074
 }
 
 
@@ -345,5 +345,5 @@ def results(
         * (1 - total_additional_expected_cost_from_leverage_and_funging_SMC)
     )
     return {
-        "value_per_dollar_after_accounting_for_leverage_and_funging": value_per_dollar_after_accounting_for_leverage_and_funging
+        "SMC: value_per_dollar_after_accounting_for_leverage_and_funging": value_per_dollar_after_accounting_for_leverage_and_funging
     }
