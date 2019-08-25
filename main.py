@@ -116,6 +116,10 @@ models = {
 }
 
 
+def sanitize_label(s):
+    return trim_prefix(s).replace(" ", "_").replace(".", "").replace("/", "")
+
+
 def trim_prefix(key):
     parts = key.partition(": ")
     if parts[1] is ": ":
@@ -136,7 +140,9 @@ def register_calculations(model_context, fn, argsList):
         arg.calculation if type(arg) is Model else arg for arg in argsList
     ]
     # For different deworming charities, we call the same code with different parameters. We make the parameters unique in the pymc3 computation graph with a per-charity prefix which we strip when actually calling the python code.
-    args = {trim_prefix(k).replace(" ", "_"): v for k, v in utility.merge_dicts(argsListMunged).items()}
+    args = {
+        sanitize_label(k): v for k, v in utility.merge_dicts(argsListMunged).items()
+    }
     with model_context:
         return {
             k: inner(k, v)
@@ -289,6 +295,7 @@ def compute_distances(models, trace):
 
     return angles, taus, footrules
 
+
 def all_outputs_from_model(model):
     def inner(piece):
         if type(piece) is Model:
@@ -296,16 +303,18 @@ def all_outputs_from_model(model):
             return utility.unions(args).union(set(fn))
         else:
             return set()
+
     return cata(inner, model)
 
 
 def all_inputs_from_model(model):
-    return cata(
-        partial(apply_if_model, lambda fn, args: utility.unions(args)), model
-    )
+    return cata(partial(apply_if_model, lambda fn, args: utility.unions(args)), model)
+
 
 def all_inputs_from_models(models):
-    return functools.reduce(lambda acc, x: acc.union(all_inputs_from_model(x)), models.values(), set())
+    return functools.reduce(
+        lambda acc, x: acc.union(all_inputs_from_model(x)), models.values(), set()
+    )
 
 
 def top_level_results(models):

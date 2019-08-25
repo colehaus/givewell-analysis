@@ -4,48 +4,48 @@ from pymc3 import math
 from utility import present_value_of_annuity
 
 cash_transfers_givewell = {
-    "Cash: average_household_size": 4.7,
-    "Cash: percentage_of_transfers_invested": 0.39,
-    "Cash: return_on_investment": 0.1,
-    "Cash: baseline_annual_consumption_per_capita": 285.92,
-    "Cash: duration_of_investment_benefits": 15,
-    "Cash: percent_of_investment_returned_when_benefits_end": 0.2,
-    "Cash: discount_from_negative_spillover": 0.05,
-    "Cash: transfer_as_percentage_of_total_cost": 0.83,
+    "Cash: average household size": 4.7,
+    "Cash: percent of transfers invested": 0.39,
+    "Cash: return on investment": 0.1,
+    "Cash: baseline consumption per capita": 285.92,
+    "Cash: duration of investment benefits": 15,
+    "Cash: percent of investment returned when benefits end": 0.2,
+    "Cash: discount from negative spillover": 0.05,
+    "Cash: transfer as percent of total cost": 0.83,
 }
 
 
 def cash_transfers(
     average_household_size,
-    percentage_of_transfers_invested,
+    percent_of_transfers_invested,
     return_on_investment,
-    baseline_annual_consumption_per_capita,
+    baseline_consumption_per_capita,
     discount_rate,
     duration_of_investment_benefits,
     percent_of_investment_returned_when_benefits_end,
     discount_from_negative_spillover,
     value_of_increasing_ln_consumption_per_capita_per_annum,
-    transfer_as_percentage_of_total_cost,
+    transfer_as_percent_of_total_cost,
 ):
 
     total_size_of_transfer = 1000
 
     size_of_transfer_per_person = total_size_of_transfer / average_household_size
-    amount_invested = size_of_transfer_per_person * percentage_of_transfers_invested
+    amount_invested = size_of_transfer_per_person * percent_of_transfers_invested
     total_increase_in_consumption_due_to_funds_transferred = (
-        1 - percentage_of_transfers_invested
+        1 - percent_of_transfers_invested
     ) * size_of_transfer_per_person
     annual_increase_in_consumption_due_to_investment_returns = (
         amount_invested * return_on_investment
     )
     total_increase_in_ln_consumption_due_to_funds_transferred = math.log(
-        baseline_annual_consumption_per_capita
+        baseline_consumption_per_capita
         + total_increase_in_consumption_due_to_funds_transferred
-    ) - math.log(baseline_annual_consumption_per_capita)
+    ) - math.log(baseline_consumption_per_capita)
     future_annual_increase_in_ln_consumption_from_return_on_investments = math.log(
-        baseline_annual_consumption_per_capita
+        baseline_consumption_per_capita
         + annual_increase_in_consumption_due_to_investment_returns
-    ) - math.log(baseline_annual_consumption_per_capita)
+    ) - math.log(baseline_consumption_per_capita)
     present_value_of_future_increases_in_ln_consumption_excluding_final_year = present_value_of_annuity(
         discount_rate,
         duration_of_investment_benefits - 1,
@@ -57,10 +57,9 @@ def cash_transfers(
     )
     present_value_of_ln_consumption_increase_in_final_year = (
         math.log(
-            baseline_annual_consumption_per_capita
-            + _additional_consumption_in_final_year
+            baseline_consumption_per_capita + _additional_consumption_in_final_year
         )
-        - math.log(baseline_annual_consumption_per_capita)
+        - math.log(baseline_consumption_per_capita)
     ) / (1 + discount_rate) ** duration_of_investment_benefits
     present_value_of_all_future_increases_in_ln_consumption = (
         present_value_of_ln_consumption_increase_in_final_year
@@ -75,10 +74,10 @@ def cash_transfers(
     ) * total_present_value_of_cash_transfer
     increase_in_ln_consumption_for_each_dollar_donated = (
         total_present_value_of_cash_transfer_accounting_for_spillovers
-        * transfer_as_percentage_of_total_cost
+        * transfer_as_percent_of_total_cost
     ) / size_of_transfer_per_person
-    value_per_dollar_donated = (
+    value_per_dollar = (
         increase_in_ln_consumption_for_each_dollar_donated
         * value_of_increasing_ln_consumption_per_capita_per_annum
     )
-    return {"Cash: value_per_dollar_donated": value_per_dollar_donated}
+    return {"Cash: value per dollar": value_per_dollar}
