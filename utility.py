@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import collections
-from SALib.sample import saltelli
-from SALib.analyze import sobol
+from SALib.sample import fast_sampler
+from SALib.analyze import fast
 import matplotlib.pyplot as plt
 import math
 import pymc3 as pm
@@ -46,12 +46,15 @@ def parameters_to_sensitivity_analysis_problem(parameters):
     def to_sa_string(parameters):
         return {"LogNormal": "lognorm"}[type(parameters).__name__]
 
-    return {
-        "num_vars": len(parameters),
-        "names": list(parameters.keys()),
-        "bounds": list(map(list, parameters.values())),
-        "dists": list(map(to_sa_string, parameters.values())),
+    items = sorted(parameters.items())
+
+    val = {
+        "num_vars": len(items),
+        "names": [k for k, v in items],
+        "bounds": [list(v) for k, v in items],
+        "dists": [to_sa_string(v) for k, v in items],
     }
+    return val
 
 
 def try_eval(x):
@@ -64,14 +67,14 @@ def try_eval(x):
 def run_sensitivity_analysis(parameters, model_calculation, num_samples):
     # Some calculations return TF values even when given ordinary numbers because of the use of pymc3.math
     problem = parameters_to_sensitivity_analysis_problem(parameters)
-    param_values = saltelli.sample(problem, num_samples, calc_second_order=False)
+    param_values = fast_sampler.sample(problem, num_samples, calc_second_order=False)
     Y = np.array(
         [
             try_eval(model_calculation(**dict(zip(parameters.keys(), vs))))
             for vs in param_values
         ]
     )
-    return sobol.analyze(problem, Y, calc_second_order=False)
+    return fast.analyze(problem, Y, calc_second_order=False)
 
 
 Bounds = collections.namedtuple("Bounds", "lo hi")
@@ -149,24 +152,19 @@ def plot_sensitivity_analysis(sa, parameters):
 
 
 def merge_dicts(dicts, no_clobber=True):
+    # This is just because python does a ridiculous thing where calling `list(a)` on an iterator twice gives different results
+    dicts_list = list(dicts)
     if no_clobber:
-        keys = list(itertools.chain.from_iterable([d.keys() for d in dicts]))
+        keys = list(itertools.chain.from_iterable([d.keys() for d in dicts_list]))
         if len(keys) != len(list(set(keys))):
             raise AssertionError(
                 "Duplicate keys in dictionary merge: " + str(keys.sort())
             )
-    return dict(collections.ChainMap(*dicts))
+    return dict(collections.ChainMap(*dicts_list))
 
 
 def flatten_lists(lists):
     return list(itertools.chain.from_iterable(lists))
-
-
-def unions(sets):
-    accum = set()
-    for s in sets:
-        accum = accum.union(s)
-    return accum
 
 
 def extract_only_value(d):
@@ -177,5 +175,20 @@ def extract_only_value(d):
         raise AssertionError("Not just a single value in dict")
 
 
+def extract_only_key(d):
+    keys = d.keys()
+    if len(keys) == 1:
+        return list(keys)[0]
+    else:
+        raise AssertionError("Not just a single value in dict")
+
+
 def keys_sorted_by_value(d):
     return [k for k, v in sorted(d.items(), key=lambda x: x[1])]
+
+
+def values_sorted_by_key(d):
+    return [v for k, v in sorted(d.items())]
+
+
+# transpose_dict

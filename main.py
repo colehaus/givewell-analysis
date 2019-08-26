@@ -12,6 +12,8 @@ import functools
 from functools import partial
 import distance
 import numpy as np
+from matplotlib import pyplot as plt
+import math
 
 sns.set(style="darkgrid")
 
@@ -129,19 +131,17 @@ def trim_prefix(key):
 
 
 # TODO: Audit duplicate variables
-def register_calculations(model_context, fn, argsList):
+def register_calculations(model_context, fn, args_list):
     def inner(k, v):
         try:
             return model_context.__getitem__(k)
         except KeyError:
             return pm.Deterministic(k, v)
 
-    argsListMunged = [
-        arg.calculation if type(arg) is Model else arg for arg in argsList
-    ]
     # For different deworming charities, we call the same code with different parameters. We make the parameters unique in the pymc3 computation graph with a per-charity prefix which we strip when actually calling the python code.
     args = {
-        sanitize_label(k): v for k, v in utility.merge_dicts(argsListMunged).items()
+        sanitize_label(k): v
+        for k, v in utility.merge_dicts(map(pluck_out, args_list)).items()
     }
     with model_context:
         return {
@@ -155,7 +155,7 @@ def register_params(model_context, params):
 
 
 def apply_if_model(fn, piece):
-    if type(piece) is Model:
+    if is_model(piece):
         (l, r) = piece
         return fn(l, r)
     else:
@@ -163,7 +163,7 @@ def apply_if_model(fn, piece):
 
 
 def apply_if_not_model(fn, piece):
-    if type(piece) is Model:
+    if is_model(piece):
         return piece
     else:
         return fn(piece)
@@ -187,14 +187,14 @@ def lookup_by_path(d, path):
     return functools.reduce(lambda acc, key: acc[key], path, d)
 
 
-def apply_fn_to_arg_list(fn, argsList):
-    args = utility.merge_dicts(argsList)
+def apply_fn_to_arg_list(fn, args_list):
+    args = utility.merge_dicts(args_list)
     return utility.call_with_only_required_arguments(fn, args)
 
 
 def map_tree_with_context(f, tree):
     def wrapper(piece):
-        if type(piece) is Model:
+        if is_model(piece):
             (fn, args) = piece
             return Model(f(fn, args), args)
         else:
@@ -210,21 +210,60 @@ def map_tree(f, tree):
     return map_tree_with_context(wrapper, tree)
 
 
+def is_model(t):
+    return type(t).__name__ == "Model"
+
+
 def cata(alg, tree):
-    if type(tree) is Model:
+    if is_model(tree):
         (fn, args) = tree
         return alg(Model(fn, [cata(alg, arg) for arg in args]))
     else:
         return alg(tree)
 
 
-def register_model(model_context, model, params):
-    model_with_params = map_tree(
-        partial(apply_if_list, partial(lookup_by_path, params)), model
+def inline_params(model, params):
+    return map_tree(partial(apply_if_list, partial(lookup_by_path, params)), model)
+
+
+def partition(fn, xs):
+    return (filter(fn, xs), filter(lambda x: not fn(x), xs))
+
+
+def merge_dicts_in_model(model):
+    def inner(fn, args):
+        models, params = partition(is_model, args)
+        return Model(fn, list(models) + [utility.merge_dicts(list(params))])
+
+    return cata(partial(apply_if_model, inner), model)
+
+
+def run_calculations(fn, args, num_samples):
+    homogenized_args = list(map(pluck_out, args))
+    labels = [
+        sanitize_label(k)
+        for k in utility.flatten_lists([k for k, v in homogenized_args])
+    ]
+    runs = np.concatenate([v for k, v in homogenized_args], axis=1)
+
+    def inner(X):
+        return {
+            k: utility.try_eval(v)
+            for k, v in utility.call_with_only_required_arguments(
+                fn, dict(zip(labels, X))
+            ).items()
+        }
+
+    return (
+        sorted(inner(runs[0]).keys()),
+        [utility.values_sorted_by_key(inner(run)) for run in runs],
     )
+
+
+
+def register_model(model_context, model):
     model_with_registered_params = map_tree(
-        partial(apply_if_dict, partial(register_params, model_context)),
-        model_with_params,
+        partial(apply_if_dict, partial(register_params, model_context)), model
     )
     return map_tree_with_context(
         lambda fn, args: register_calculations(model_context, fn, args)
@@ -239,7 +278,7 @@ def strip_vars(model):
 
 
 def pluck_out(piece):
-    if type(piece) is Model:
+    if is_model(piece):
         return piece.calculation
     else:
         return piece
@@ -276,12 +315,12 @@ def eval_model(model, params):
 # We compute these from the trace instead of registering them in the model because pmyc3/theano doesn't like some of the operations we have to perform during the computation.
 def compute_distances(models, trace):
     result_traces = {k: trace[v] for k, v in top_level_results(models).items()}
-    runs = np.transpose([v for k, v in sorted(result_traces.items())])
+    runs = np.transpose(utility.values_sorted_by_key(result_traces))
 
-    reference_vector = [v for k, v in sorted(distance.value_per_dollar.items())]
+    reference_vector = utility.values_sorted_by_key(distance.value_per_dollar)
     angles = [distance.angle_between(reference_vector, run) for run in runs]
 
-    vector_keys = [k for k, v in sorted(distance.value_per_dollar.items())]
+    vector_keys = sorted(distance.value_per_dollar.keys())
     run_rankings = [
         utility.keys_sorted_by_value(dict(zip(vector_keys, run))) for run in runs
     ]
@@ -298,28 +337,35 @@ def compute_distances(models, trace):
 
 def all_outputs_from_model(model):
     def inner(piece):
-        if type(piece) is Model:
+        if is_model(piece):
             fn, args = piece
-            return utility.unions(args).union(set(fn))
+            return utility.merge_dicts(args + [fn], no_clobber=False)
         else:
-            return set()
+            return dict()
 
     return cata(inner, model)
 
 
 def all_inputs_from_model(model):
-    return cata(partial(apply_if_model, lambda fn, args: utility.unions(args)), model)
+    return cata(
+        partial(
+            apply_if_model, lambda fn, args: utility.merge_dicts(args, no_clobber=False)
+        ),
+        model,
+    )
 
 
 def all_inputs_from_models(models):
     return functools.reduce(
-        lambda acc, x: acc.union(all_inputs_from_model(x)), models.values(), set()
+        lambda acc, x: utility.merge_dicts(all_inputs_from_model(x) + [acc]),
+        models.values(),
+        dict(),
     )
 
 
 def top_level_results(models):
     return {
-        k: utility.extract_only_value(model.calculation) for k, model in models.items()
+        k: utility.extract_only_key(model.calculation) for k, model in models.items()
     }
 
 
@@ -335,16 +381,93 @@ def test():
     )
 
 
+def plot_uncertainty_small_multiples(trace, results):
+    fig = plt.figure(constrained_layout=True, figsize=(12, 15))
+
+    st = fig.suptitle(
+        "Uncertainty for key outputs in Givewell's cost-effectiveness estimates"
+    )
+    st.set_y(0.87)
+    fig.subplots_adjust(top=0.85)
+
+    gs = fig.add_gridspec(ncols=3, nrows=4)
+    distances = fig.add_subplot(gs[0, :])
+    result_plots = [
+        (fig.add_subplot(gs[1 + math.floor(i / 3), i % 3]), v)
+        for i, v in enumerate(results.items())
+    ]
+
+    sns.kdeplot(
+        trace.angle,
+        ax=distances,
+        label="Angle (in radians)",
+        gridsize=500,
+        clip=(0, math.pi),
+    )
+    sns.kdeplot(
+        trace.tau,
+        ax=distances,
+        bw=0.8,
+        label="Kendall's tau",
+        gridsize=500,
+        clip=(0, 1),
+    )
+    sns.kdeplot(
+        trace.footrule,
+        ax=distances,
+        bw=0.8,
+        label="Spearman's footrule",
+        gridsize=500,
+        clip=(0, 1),
+    )
+    distances.set(xlim=(-0.5, 1))
+
+    for (ax, (charity, var)) in result_plots:
+        sns.kdeplot(trace[var], ax=ax, label=charity, gridsize=500)
+        ax.set(xlim=(0, 0.25))
+
+
+def plot_uncertainty_overlaid(trace, results):
+    ax = None
+    for charity, var in results.items():
+        mean = np.mean(trace[var])
+        normed = trace[var] / mean
+        ax = sns.kdeplot(normed, label=charity)
+        ax.set(xlim=(-0, 2))
+    ax.set_title(
+        "Normalized uncertainty for value per dollar of GiveWell top charities"
+    )
+
+
 def main(parameters):
-    model = pm.Model()
-    for k, v in models.items():
-        cata(register, tree)
+    model_context = pm.Model()
+    models_with_params = {
+        k: inline_params(v, utility.numbers_to_log_normal_params(givewell, 0.5))
+        for k, v in models.items()
+    }
+    models_with_variables = {
+        k: register_model(model_context, v) for k, v in models_with_params.items()
+    }
+    with model_context:
+        trace = pm.sample(1000)
 
-    # with model:
-    #     trace = pm.sample(1)
-    # frame = pm.trace_to_dataframe(trace)
+    angles, taus, footrules = compute_distances(models_with_variables, trace)
+    trace.add_values(
+        {
+            "angle": np.array(angles),
+            "tau": np.array(taus),
+            "footrule": np.array(footrules),
+        }
+    )
 
-    # pm.plot_posterior(trace, varnames=models.keys(), kde_plot=True)
+    df = pm.trace_to_dataframe(trace)
+
+    results = top_level_results(models_with_variables)
+
+    plt.figure()
+    main.plot_uncertainty_small_multiples(trace, results)
+    plt.figure()
+    main.plot_uncertainty_overlaid(trace, results)
 
     # for k, v in models.items():
     #     params = dict(collections.ChainMap(*[parameters[p] for p in v.parameters]))
