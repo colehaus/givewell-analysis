@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import pandas
 import collections
 import moral_weights
 import cash
@@ -12,8 +13,7 @@ import functools
 from functools import partial
 import distance
 import numpy as np
-from SALib.sample import fast_sampler
-from SALib.analyze import fast
+from SALib.analyze import delta
 from matplotlib import pyplot as plt
 import math
 import itertools
@@ -128,7 +128,7 @@ def sanitize_label(s):
 
 def trim_prefix(key):
     parts = key.partition(": ")
-    if parts[1] is ": ":
+    if parts[1] == ": ":
         return parts[2]
     else:
         return key
@@ -301,7 +301,48 @@ def run_calculations(fn, args, num_samples):
 #     )
 
 
+def transpose(lists):
+    return [list(x) for x in zip(*lists)]
+
+
+def sort_analysis(a):
+    transposed = transpose(a.values())
+    original = transpose(sorted(transposed, reverse=True))
+    return dict(zip(a.keys(), original))
+
+
+def calculate_all_small_step_sensitivities(trace, models):
+    def analyses(v):
+        return utility.flatten_lists(
+            [calculate_sensitivities(trace, spec) for spec in small_step_chart_specs(v)]
+        )
+
+    return {k: [sort_analysis(a) for a in analyses(v)] for k, v in models.items()}
+
+
+def calculate_all_big_step_sensitivities(trace, models):
+    return {
+        k: sort_analysis(calculate_sensitivities(trace, big_step_chart_spec(v))[0])
+        for k, v in models.items()
+    }
+
+
+def calculate_angle_sensitivities(trace, models_with_variables):
+    inputs = all_inputs_from_models(models_with_variables)
+    return sort_analysis(
+        calculate_sensitivities(trace, ChartSpec(ins=inputs, outs=["angle"]))[0]
+    )
+
+
+def calculate_sensitivities(trace, spec):
+    ins_list = list(spec.ins)
+    ins = np.stack([trace[i] for i in ins_list], axis=1)
+    problem = {"num_vars": len(spec.ins), "names": ins_list}
+    return [delta.analyze(problem, ins, trace[out]) for out in spec.outs]
+
+
 def register_model(model_context, model):
+
     model_with_registered_params = map_tree(
         partial(apply_if_dict, partial(register_params, model_context)), model
     )
@@ -471,12 +512,58 @@ def plot_uncertainty_small_multiples(trace, results):
     # fig.tight_layout(rect=[0, 0.01, 1, 0.97])
 
 
+def sensitivity_analysis_to_dataframe(sa, should_trim_prefix=True):
+    def trim(s):
+        if should_trim_prefix:
+            return trim_prefix(s)
+        else:
+            return s
+
+    S1 = {"variable": [], "S1 sensitivity": [], "tag": []}
+    for v, c, k in zip(sa["S1"], sa["S1_conf"], map(trim, sa["names"])):
+        S1["variable"].append(k)
+        S1["S1 sensitivity"].append(v)
+        S1["tag"].append("S1")
+
+        S1["variable"].append(k)
+        S1["S1 sensitivity"].append(v - c / 2)
+        S1["tag"].append("S1_l")
+
+        S1["variable"].append(k)
+        S1["S1 sensitivity"].append(v + c / 2)
+        S1["tag"].append("S1_h")
+
+    delta = {"variable": [], "delta sensitivity": [], "tag": []}
+    for v, c, k in zip(sa["delta"], sa["delta_conf"], map(trim, sa["names"])):
+        delta["variable"].append(k)
+        delta["delta sensitivity"].append(v)
+        delta["tag"].append("delta")
+
+        delta["variable"].append(k)
+        delta["delta sensitivity"].append(v - c / 2)
+        delta["tag"].append("delta_l")
+
+        delta["variable"].append(k)
+        delta["delta sensitivity"].append(v + c / 2)
+        delta["tag"].append("delta_h")
+
+    return pandas.DataFrame(S1), pandas.DataFrame(delta)
+
+
+def plot_sensitivity_analysis(sa, should_trim_prefix=True):
+    S1, delta = sensitivity_analysis_to_dataframe(sa, should_trim_prefix)
+    plt.figure(figsize=(6, math.ceil(len(sa["names"]) / 3)))
+    sns.pointplot(x="delta sensitivity", y="variable", data=delta, join=False)
+    plt.figure(figsize=(6, math.ceil(len(sa["names"]) / 3)))
+    sns.pointplot(x="S1 sensitivity", y="variable", data=S1, join=False)
+
+
 def plot_uncertainty_overlaid(trace, results):
     ax = None
     for charity, var in results.items():
         mean = np.mean(trace[var])
         normed = trace[var] / mean
-        ax = sns.kdeplot(normed, label=charity)
+        ax = sns.kdeplot(normed, label=charity, gridsize=500)
         ax.set_xlim(-0, 2)
     # ax.set_title(
     #     "Normalized uncertainty for value per dollar of GiveWell top charities"
@@ -489,9 +576,15 @@ def grid_dims(n):
     return rows, cols
 
 
-def plot_regressions(charity, df, step):
+def plot_regressions(ordering, charity, df, step, should_trim_prefix=True):
     combos = list(itertools.product(step.ins, step.outs))
-    rows, cols = grid_dims(len(combos))
+    # The `ordering` dict only includes input variables (rather than intermediate calculations) so we don't worry about sorting anything else
+    combos_sorted = (
+        sorted(combos, key=lambda x: ordering[x[0]])
+        if set(step.ins).issubset(set(ordering.keys()))
+        else combos
+    )
+    rows, cols = grid_dims(len(combos_sorted))
 
     print(charity)
     fig = plt.figure(tight_layout=True, figsize=(3 * cols, 3 * rows))
@@ -502,25 +595,31 @@ def plot_regressions(charity, df, step):
 
     plots = [
         (fig.add_subplot(gs[math.floor(i / cols), i % cols]), v)
-        for i, v in enumerate(combos)
+        for i, v in enumerate(combos_sorted)
     ]
+
+    def trim(s):
+        if should_trim_prefix:
+            return trim_prefix(s)
+        else:
+            return s
 
     for (ax, (i, o)) in plots:
         sns.regplot(x=i, y=o, data=df, ax=ax)
         ax.set_xlim(min(df[i]) * 0.9, max(df[i]) * 1.1)
         ax.set_ylim(min(df[o]) * 0.9, max(df[o]) * 1.1)
-        ax.set_xlabel("\n".join(wrap(trim_prefix(i), 20)))
-        ax.set_ylabel("\n".join(wrap(trim_prefix(o), 20)))
+        ax.set_xlabel("\n".join(wrap(trim(i), 20)))
+        ax.set_ylabel("\n".join(wrap(trim(o), 20)))
 
     # fig.tight_layout()
 
 
-def plot_all_big_step_regressions(models_with_variables, df):
+def plot_all_big_step_regressions(ordering, models_with_variables, df):
     for charity, model in models_with_variables.items():
-        plot_regressions(charity, df, big_step_chart_spec(model))
+        plot_regressions(ordering, charity, df, big_step_chart_spec(model))
 
 
-def plot_all_small_step_regressions(models_with_variables, df):
+def plot_all_small_step_regressions(ordering, models_with_variables, df):
     for charity, model in models_with_variables.items():
         for spec in small_step_chart_specs(model):
             # This is a hacky way to remove the second unwanted (for graphing) output from one of the calculations
@@ -529,12 +628,18 @@ def plot_all_small_step_regressions(models_with_variables, df):
                 != "SMC: unadjusted deaths averted per 1000 under 5s targeted",
                 spec.outs,
             )
-            plot_regressions(charity, df, ChartSpec(ins=spec.ins, outs=outs))
+            plot_regressions(ordering, charity, df, ChartSpec(ins=spec.ins, outs=outs))
 
 
-def plot_inputs_vs_angle(models_with_variables, df):
+def plot_inputs_vs_angle(ordering, models_with_variables, df):
     inputs = all_inputs_from_models(models_with_variables)
-    plot_regressions("overall ranking", df, ChartSpec(ins=inputs, outs=["angle"]))
+    plot_regressions(
+        ordering,
+        "overall ranking",
+        df,
+        ChartSpec(ins=inputs, outs=["angle"]),
+        should_trim_prefix=False,
+    )
 
 
 def main(parameters):
@@ -566,13 +671,23 @@ def main(parameters):
     plot_uncertainty_small_multiples(trace, results)
     plt.figure()
     plot_uncertainty_overlaid(trace, results)
-    plot_all_small_step_regressions(models_with_variables, df)
-    plot_all_big_step_regressions(models_with_variables, df)
-    plot_inputs_vs_angle(models_with_variables, df)
 
-    # for k, v in models.items():
-    #     params = dict(collections.ChainMap(*[parameters[p] for p in v.parameters]))
-    #     sa = utility.run_sensitivity_analysis(params, v.calculation, 1)
-    #     utility.plot_sensitivity_analysis(sa, params)
-    #     for i in params.keys():
-    #         sns.jointplot(i, k, data=frame, kind="reg")
+    small_step_analyses = calculate_all_small_step_sensitivities(
+        trace, models_with_variables
+    )
+    big_step_analyses = calculate_all_big_step_sensitivities(
+        trace, models_with_variables
+    )
+    angle_analysis = calculate_angle_sensitivities(trace, models_with_variables)
+    print(angle_analysis)
+    ordering = dict(map(lambda x: (x[1], x[0]), enumerate(angle_analysis["names"])))
+
+    plot_all_small_step_regressions(ordering, models_with_variables, df)
+    plot_all_big_step_regressions(ordering, models_with_variables, df)
+    plot_inputs_vs_angle(ordering, models_with_variables, df)
+
+    plot_sensitivity_analysis(angle_analysis, should_trim_prefix=False)
+    for analysis in list(big_step_analyses.values()) + utility.flatten_lists(
+        list(small_step_analyses.values())
+    ):
+        plot_sensitivity_analysis(analysis)

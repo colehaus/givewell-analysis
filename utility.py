@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 
 import collections
-from SALib.sample import fast_sampler
-from SALib.analyze import fast
-import matplotlib.pyplot as plt
 import math
 import pymc3 as pm
-import numpy as np
-import pandas
 import scipy
 import inspect
-import seaborn as sns
 import itertools
 
 LogNormal = collections.namedtuple("LogNormal", "mu sd")
@@ -64,19 +58,6 @@ def try_eval(x):
         return x
 
 
-def run_sensitivity_analysis(parameters, model_calculation, num_samples):
-    # Some calculations return TF values even when given ordinary numbers because of the use of pymc3.math
-    problem = parameters_to_sensitivity_analysis_problem(parameters)
-    param_values = fast_sampler.sample(problem, num_samples, calc_second_order=False)
-    Y = np.array(
-        [
-            try_eval(model_calculation(**dict(zip(parameters.keys(), vs))))
-            for vs in param_values
-        ]
-    )
-    return fast.analyze(problem, Y, calc_second_order=False)
-
-
 Bounds = collections.namedtuple("Bounds", "lo hi")
 
 
@@ -112,48 +93,6 @@ def call_with_only_required_arguments(fn, d):
     required_args = set(inspect.getargspec(fn).args)
     args = {k: v for k, v in d.items() if k in required_args}
     return fn(**args)
-
-
-def sensitivity_analysis_to_dataframe(sa, parameters):
-    S1 = {"variable": [], "sensitivity": [], "tag": []}
-
-    keys = list(parameters.keys())
-    for v, c, k in zip(sa["S1"], sa["S1_conf"], keys):
-        S1["variable"].append(k)
-        S1["sensitivity"].append(v)
-        S1["tag"].append("S1")
-
-        S1["variable"].append(k)
-        S1["sensitivity"].append(v - c)
-        S1["tag"].append("S1l")
-
-        S1["variable"].append(k)
-        S1["sensitivity"].append(v + c)
-        S1["tag"].append("S1h")
-
-    ST = {"variable": [], "sensitivity": [], "tag": []}
-    for v, c, k in zip(sa["ST"], sa["ST_conf"], keys):
-        ST["variable"].append(k)
-        ST["sensitivity"].append(v)
-        ST["tag"].append("ST")
-
-        ST["variable"].append(k)
-        ST["sensitivity"].append(v - c)
-        ST["tag"].append("STl")
-
-        ST["variable"].append(k)
-        ST["sensitivity"].append(v + c)
-        ST["tag"].append("STh")
-
-    return pandas.DataFrame(S1), pandas.DataFrame(ST)
-
-
-def plot_sensitivity_analysis(sa, parameters):
-    S1, ST = sensitivity_analysis_to_dataframe(sa, parameters)
-    plt.figure()
-    sns.pointplot(x="sensitivity", y="variable", data=S1, join=False)
-    plt.figure()
-    sns.pointplot(x="sensitivity", y="variable", data=ST, join=False)
 
 
 def merge_dicts(dicts, no_clobber=True):
