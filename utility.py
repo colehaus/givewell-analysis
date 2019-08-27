@@ -103,6 +103,11 @@ def numbers_to_log_normal_params(params, percent):
     }
 
 
+def filter_for_required_arguments(fn, d, transform):
+    required_args = set(inspect.getargspec(fn).args)
+    return {k: v for k, v in d.items() if transform(k) in required_args}
+
+
 def call_with_only_required_arguments(fn, d):
     required_args = set(inspect.getargspec(fn).args)
     args = {k: v for k, v in d.items() if k in required_args}

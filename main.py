@@ -12,8 +12,12 @@ import functools
 from functools import partial
 import distance
 import numpy as np
+from SALib.sample import fast_sampler
+from SALib.analyze import fast
 from matplotlib import pyplot as plt
 import math
+import itertools
+from textwrap import wrap
 
 sns.set(style="darkgrid")
 
@@ -227,7 +231,7 @@ def inline_params(model, params):
 
 
 def partition(fn, xs):
-    return (filter(fn, xs), filter(lambda x: not fn(x), xs))
+    return (list(filter(fn, xs)), list(filter(lambda x: not fn(x), xs)))
 
 
 def merge_dicts_in_model(model):
@@ -236,6 +240,25 @@ def merge_dicts_in_model(model):
         return Model(fn, list(models) + [utility.merge_dicts(list(params))])
 
     return cata(partial(apply_if_model, inner), model)
+
+
+def prune_args_in_model(model):
+    def inner(fn, args):
+        models, params = partition(is_model, args)
+        return Model(
+            fn,
+            list(models)
+            + [
+                utility.filter_for_required_arguments(fn, p, sanitize_label)
+                for p in params
+            ],
+        )
+
+    return cata(partial(apply_if_model, inner), model)
+
+
+def sanitize_keys(d):
+    return {sanitize_label(k): v for k, v in d.items()}
 
 
 def run_calculations(fn, args, num_samples):
@@ -259,6 +282,23 @@ def run_calculations(fn, args, num_samples):
         [utility.values_sorted_by_key(inner(run)) for run in runs],
     )
 
+
+# def sample_model(model, num_samples):
+#     def inner(params):
+#         samples = fast_sampler.sample(
+#             utility.parameters_to_sensitivity_analysis_problem(params),
+#             num_samples,
+#         )
+#         ordered_keys = sorted(params.keys())
+#         return ordered_keys, samples
+
+#     model_with_sampled_params = map_tree(partial(apply_if_dict, inner), model)
+#     return map_tree_with_context(
+#         lambda fn, args: run_calculations(fn, args, num_samples)
+#         if args is not None
+#         else fn,
+#         model_with_sampled_params,
+#     )
 
 
 def register_model(model_context, model):
@@ -332,7 +372,7 @@ def compute_distances(models, trace):
         for ranking in run_rankings
     ]
 
-    return angles, taus, footrules
+    return np.array(angles), np.array(taus), np.array(footrules)
 
 
 def all_outputs_from_model(model):
@@ -357,7 +397,9 @@ def all_inputs_from_model(model):
 
 def all_inputs_from_models(models):
     return functools.reduce(
-        lambda acc, x: utility.merge_dicts(all_inputs_from_model(x) + [acc]),
+        lambda acc, x: utility.merge_dicts(
+            [all_inputs_from_model(x), acc], no_clobber=False
+        ),
         models.values(),
         dict(),
     )
@@ -382,18 +424,18 @@ def test():
 
 
 def plot_uncertainty_small_multiples(trace, results):
-    fig = plt.figure(constrained_layout=True, figsize=(12, 15))
+    rows, cols = grid_dims(len(results))
 
-    st = fig.suptitle(
-        "Uncertainty for key outputs in Givewell's cost-effectiveness estimates"
-    )
-    st.set_y(0.87)
-    fig.subplots_adjust(top=0.85)
+    fig = plt.figure(tight_layout=True, figsize=(3 * cols, 3 * (1 + rows)))
 
-    gs = fig.add_gridspec(ncols=3, nrows=4)
+    # st = fig.suptitle(
+    #     "Uncertainty for key outputs in Givewell's cost-effectiveness estimates"
+    # )
+
+    gs = fig.add_gridspec(ncols=cols, nrows=rows + 1)
     distances = fig.add_subplot(gs[0, :])
     result_plots = [
-        (fig.add_subplot(gs[1 + math.floor(i / 3), i % 3]), v)
+        (fig.add_subplot(gs[1 + math.floor(i / cols), i % cols]), v)
         for i, v in enumerate(results.items())
     ]
 
@@ -420,11 +462,13 @@ def plot_uncertainty_small_multiples(trace, results):
         gridsize=500,
         clip=(0, 1),
     )
-    distances.set(xlim=(-0.5, 1))
+    distances.set_xlim(-0.5, 1)
 
     for (ax, (charity, var)) in result_plots:
         sns.kdeplot(trace[var], ax=ax, label=charity, gridsize=500)
-        ax.set(xlim=(0, 0.25))
+        ax.set_xlim(0, 0.25)
+
+    # fig.tight_layout(rect=[0, 0.01, 1, 0.97])
 
 
 def plot_uncertainty_overlaid(trace, results):
@@ -433,16 +477,72 @@ def plot_uncertainty_overlaid(trace, results):
         mean = np.mean(trace[var])
         normed = trace[var] / mean
         ax = sns.kdeplot(normed, label=charity)
-        ax.set(xlim=(-0, 2))
-    ax.set_title(
-        "Normalized uncertainty for value per dollar of GiveWell top charities"
-    )
+        ax.set_xlim(-0, 2)
+    # ax.set_title(
+    #     "Normalized uncertainty for value per dollar of GiveWell top charities"
+    # )
+
+
+def grid_dims(n):
+    cols = 4
+    rows = math.ceil(n / cols)
+    return rows, cols
+
+
+def plot_regressions(charity, df, step):
+    combos = list(itertools.product(step.ins, step.outs))
+    rows, cols = grid_dims(len(combos))
+
+    print(charity)
+    fig = plt.figure(tight_layout=True, figsize=(3 * cols, 3 * rows))
+    # Title with `tight_layout` requires `rect`. `tight_layout` with many rows (?) crashes. So we omit the title for now.
+    # st = fig.suptitle("Visual sensitivity analysis of results for " + charity)
+
+    gs = fig.add_gridspec(ncols=cols, nrows=rows)
+
+    plots = [
+        (fig.add_subplot(gs[math.floor(i / cols), i % cols]), v)
+        for i, v in enumerate(combos)
+    ]
+
+    for (ax, (i, o)) in plots:
+        sns.regplot(x=i, y=o, data=df, ax=ax)
+        ax.set_xlim(min(df[i]) * 0.9, max(df[i]) * 1.1)
+        ax.set_ylim(min(df[o]) * 0.9, max(df[o]) * 1.1)
+        ax.set_xlabel("\n".join(wrap(trim_prefix(i), 20)))
+        ax.set_ylabel("\n".join(wrap(trim_prefix(o), 20)))
+
+    # fig.tight_layout()
+
+
+def plot_all_big_step_regressions(models_with_variables, df):
+    for charity, model in models_with_variables.items():
+        plot_regressions(charity, df, big_step_chart_spec(model))
+
+
+def plot_all_small_step_regressions(models_with_variables, df):
+    for charity, model in models_with_variables.items():
+        for spec in small_step_chart_specs(model):
+            # This is a hacky way to remove the second unwanted (for graphing) output from one of the calculations
+            outs = filter(
+                lambda x: x
+                != "SMC: unadjusted deaths averted per 1000 under 5s targeted",
+                spec.outs,
+            )
+            plot_regressions(charity, df, ChartSpec(ins=spec.ins, outs=outs))
+
+
+def plot_inputs_vs_angle(models_with_variables, df):
+    inputs = all_inputs_from_models(models_with_variables)
+    plot_regressions("overall ranking", df, ChartSpec(ins=inputs, outs=["angle"]))
 
 
 def main(parameters):
     model_context = pm.Model()
     models_with_params = {
-        k: inline_params(v, utility.numbers_to_log_normal_params(givewell, 0.5))
+        k: prune_args_in_model(
+            inline_params(v, utility.numbers_to_log_normal_params(parameters, 0.5))
+        )
         for k, v in models.items()
     }
     models_with_variables = {
@@ -452,22 +552,23 @@ def main(parameters):
         trace = pm.sample(1000)
 
     angles, taus, footrules = compute_distances(models_with_variables, trace)
-    trace.add_values(
-        {
-            "angle": np.array(angles),
-            "tau": np.array(taus),
-            "footrule": np.array(footrules),
-        }
-    )
+    trace.add_values({"angle": angles, "tau": taus, "footrule": footrules})
 
     df = pm.trace_to_dataframe(trace)
+    # Have to add these manually because pymc3 doesn't seem to do so in the line above
+    df["angle"] = angles
+    df["tau"] = taus
+    df["footrule"] = footrules
 
     results = top_level_results(models_with_variables)
 
     plt.figure()
-    main.plot_uncertainty_small_multiples(trace, results)
+    plot_uncertainty_small_multiples(trace, results)
     plt.figure()
-    main.plot_uncertainty_overlaid(trace, results)
+    plot_uncertainty_overlaid(trace, results)
+    plot_all_small_step_regressions(models_with_variables, df)
+    plot_all_big_step_regressions(models_with_variables, df)
+    plot_inputs_vs_angle(models_with_variables, df)
 
     # for k, v in models.items():
     #     params = dict(collections.ChainMap(*[parameters[p] for p in v.parameters]))
