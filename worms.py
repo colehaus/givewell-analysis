@@ -5,8 +5,6 @@ from utility import present_value_of_annuity
 long_term_income_effects_givewell = {
     "Deworming: effect on ln income in MK pop": 0.143,
     "Deworming: num yrs between deworming and benefits": 8,
-    "Deworming: duration of long-term benefits": 40,
-    "Deworming: multiplier for sharing w/in households": 2.0,
     "Deworming: adjustment for el nino": 0.65,
     "Deworming: adjustment for yrs of treatment in MK vs programs": 0.90,
     "Deworming: replicability adjustment": 0.11,

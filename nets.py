@@ -191,8 +191,8 @@ def deaths_averted_children_under_5(
 
 
 deaths_averted_over_5_givewell = {
-    "AMF: ratio_of_5_and_over_to_under_5_malaria_deaths": 0.38,
-    "AMF: relative_efficacy_of_LLINs_for_people_over_5": 0.80,
+    "AMF: ratio of 5 and over to under 5 malaria deaths": 0.38,
+    "AMF: relative efficacy of LLINs for people over 5": 0.80,
 }
 
 
@@ -220,24 +220,14 @@ def deaths_averted_over_5(
     }
 
 
-income_increase_under_15_givewell = {
-    "AMF: increase in income from eliminating prob. of infection in youth": 0.023,
-    "AMF: replicability adjustment for malaria vs income": 0.52,
-    "AMF: num yrs between program and long-term benefits": 10,
-    "AMF: duration of long-term benefits": 40,
-    "AMF: multiplier for sharing w/in households": 2,
-}
-
-
-# TODO: Find stripped duplicates
 def income_increase_under_15(
     person_yrs_of_coverage_for_under_5s,
     person_yrs_of_coverage_for_5_to_14s,
     reduction_in_prob_of_covered_child_being_infected_under_5,
     reduction_in_prob_of_covered_child_being_infected_5_to_14,
-    increase_in_income_from_eliminating_prob_of_infection_in_youth,
+    increase_in_income_from_eliminating_prob_of_malaria_infection_in_youth,
     replicability_adjustment_for_malaria_vs_income,
-    num_yrs_between_program_and_long_term_benefits,
+    num_yrs_between_anti_malaria_program_and_long_term_benefits,
     discount_rate,
     duration_of_long_term_benefits,
     multiplier_for_sharing_win_households,
@@ -253,14 +243,18 @@ def income_increase_under_15(
     )
     adjusted_increase_in_ln_income_from_reducing_point_in_time_probability_of_malaria_infection_from_100_to_0_for_an_invidiual_between_the_ages_of_0_and_14 = (
         (
-            log(1 + increase_in_income_from_eliminating_prob_of_infection_in_youth)
+            log(
+                1
+                + increase_in_income_from_eliminating_prob_of_malaria_infection_in_youth
+            )
             - log(1)
         )
         * replicability_adjustment_for_malaria_vs_income
     )
     benefit_on_one_years_income = (
         adjusted_increase_in_ln_income_from_reducing_point_in_time_probability_of_malaria_infection_from_100_to_0_for_an_invidiual_between_the_ages_of_0_and_14
-        / (1 + discount_rate) ** num_yrs_between_program_and_long_term_benefits
+        / (1 + discount_rate)
+        ** num_yrs_between_anti_malaria_program_and_long_term_benefits
     )
     present_value_of_lifetime_benefits_from_reducing_prevalence_from_1_to_0_for_an_individual_for_one_year_between_ages_of_0_and_14 = present_value_of_annuity(
         discount_rate, duration_of_long_term_benefits, benefit_on_one_years_income

@@ -46,7 +46,7 @@ coverage_adjustment_givewell = {
     "SMC: percent of targeted receiving at least 1 round": 0.92,
     "SMC: percent of targeted receiving at least 2 rounds": 0.83,
     "SMC: percent of targeted receiving at least 3 rounds": 0.71,
-    "SMC: percent of targeted receiveding all 4 rounds": 0.55,
+    "SMC: percent of targeted receiving all 4 rounds": 0.55,
     "SMC: coverage in trials in meta analysis": 0.90,
 }
 
@@ -55,7 +55,7 @@ def coverage_adjustment(
     percent_of_targeted_receiving_at_least_1_round,
     percent_of_targeted_receiving_at_least_2_rounds,
     percent_of_targeted_receiving_at_least_3_rounds,
-    percent_of_targeted_receiveding_all_4_rounds,
+    percent_of_targeted_receiving_all_4_rounds,
     coverage_in_trials_in_meta_analysis,
 ):
     percent_of_children_who_received_exactly_1_round = (
@@ -68,10 +68,10 @@ def coverage_adjustment(
     )
     percent_of_children_who_received_exactly_3_round = (
         percent_of_targeted_receiving_at_least_3_rounds
-        - percent_of_targeted_receiveding_all_4_rounds
+        - percent_of_targeted_receiving_all_4_rounds
     )
     average_number_of_treatments = (
-        percent_of_targeted_receiveding_all_4_rounds * 4
+        percent_of_targeted_receiving_all_4_rounds * 4
         + percent_of_children_who_received_exactly_3_round * 3
         + percent_of_children_who_received_exactly_2_round * 2
         + percent_of_children_who_received_exactly_1_round * 1
@@ -216,11 +216,6 @@ def mortality_reduction_in_untreated_population(
 income_increase_ages_14_and_under_givewell = {
     "SMC: malaria prevalance young": 0.29,
     "SMC: malaria prevalence old": 0.29,
-    "SMC: increase in income from eliminating prob of infection in youth": 0.023,
-    "SMC: replicability adjustment for malaria vs income": 0.52,
-    "SMC: num yrs between program and long-term benefits": 10,
-    "SMC: duration of long term benefits": 40,
-    "SMC: multiplier for sharing w/in households": 2,
 }
 
 
@@ -233,9 +228,9 @@ def income_increases_age_14_and_under(
     external_validity_adjustment,
     reduction_in_untreated_pop_per_reduction_in_treated_pop,
     adjustment_for_higher_percent_covered_in_trial_than_ACCESS,
-    increase_in_income_from_eliminating_prob_of_infection_in_youth,
+    increase_in_income_from_eliminating_prob_of_malaria_infection_in_youth,
     replicability_adjustment_for_malaria_vs_income,
-    num_yrs_between_program_and_long_term_benefits,
+    num_yrs_between_anti_malaria_program_and_long_term_benefits,
     discount_rate,
     duration_of_long_term_benefits,
     multiplier_for_sharing_win_households,
@@ -268,14 +263,18 @@ def income_increases_age_14_and_under(
     )
     increase_in_ln_income_from_reducing_point_in_time_probability_of_malaria_infection_from_100_to_0_for_individual_for_one_year_between_ages_of_0_and_14 = (
         (
-            log(1 + increase_in_income_from_eliminating_prob_of_infection_in_youth)
+            log(
+                1
+                + increase_in_income_from_eliminating_prob_of_malaria_infection_in_youth
+            )
             - log(1)
         )
         * replicability_adjustment_for_malaria_vs_income
     )
     benefit_on_one_years_income = (
         increase_in_ln_income_from_reducing_point_in_time_probability_of_malaria_infection_from_100_to_0_for_individual_for_one_year_between_ages_of_0_and_14
-        / (1 + discount_rate) ** num_yrs_between_program_and_long_term_benefits
+        / (1 + discount_rate)
+        ** num_yrs_between_anti_malaria_program_and_long_term_benefits
     )
     present_value_of_lifetime_benefits_from_reducing_prevalence_from_1_to_0_for_an_individual_for_one_year_between_ages_of_0_and_14 = present_value_of_annuity(
         discount_rate, duration_of_long_term_benefits, benefit_on_one_years_income

@@ -36,9 +36,9 @@ def meta_analysis_finding_on_relative_rate_of_mortality_reduction(
 
 
 mortality_reduction_in_hypothetical_cohort_givewell = {
-    "VAS: baseline_deaths_per_thousand_child_years_for_young_children": 12.1,
-    "VAS: internal_validity_adjustment": 0.95,
-    "VAS: external_validity_adjustment": 0.23,
+    "VAS: baseline deaths per thousand child years for young children": 12.1,
+    "VAS: internal validity adjustment": 0.95,
+    "VAS: external validity adjustment": 0.23,
 }
 
 

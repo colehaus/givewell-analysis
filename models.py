@@ -3,7 +3,7 @@
 from functools import partial
 
 import cash
-import moral_weights
+import shared_params
 import nets
 import smc
 from tree import Model
@@ -33,7 +33,8 @@ smc_treated_population = Model(
 )
 
 worms_long_term_income_effects = Model(
-    worms.long_term_income_effects, [["Moral weights"], ["Deworming", "Income effects"]]
+    worms.long_term_income_effects,
+    [["Moral weights"], ["Income"], ["Deworming", "Income effects"]],
 )
 
 amf_cost_per_yr = Model(nets.cost_per_yr_of_protection, [["AMF", "Cost"]])
@@ -80,6 +81,7 @@ models = {
                 smc.income_increases_age_14_and_under,
                 [
                     ["Moral weights"],
+                    ["Income"],
                     ["Malaria Consortium", "Shared"],
                     ["Malaria Consortium", "Income increase"],
                     smc_effectiveness,
@@ -136,7 +138,7 @@ models = {
                 nets.income_increase_under_15,
                 [
                     ["Moral weights"],
-                    ["AMF", "Income increase"],
+                    ["Income"],
                     amf_cost_per_yr,
                     Model(
                         nets.reduction_in_prevalence_from_net_distributions,
@@ -158,7 +160,8 @@ models = {
 }
 
 givewell = {
-    "Moral weights": moral_weights.givewell,
+    "Moral weights": shared_params.moral_givewell,
+    "Income": shared_params.income_givewell,
     "GiveDirectly": cash.cash_transfers_givewell,
     "Deworming": {
         "Income effects": worms.long_term_income_effects_givewell,
@@ -192,7 +195,6 @@ givewell = {
         "Prevalence reduction": nets.reduction_in_prevalence_from_net_distributions_givewell,
         "Cost": nets.cost_per_yr_of_protection_givewell,
         "Deaths over 5": nets.deaths_averted_over_5_givewell,
-        "Income increase": nets.income_increase_under_15_givewell,
         "Results": nets.results_givewell,
     },
 }
