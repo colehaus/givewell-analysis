@@ -5,8 +5,8 @@ from utility import present_value_of_annuity
 long_term_income_effects_givewell = {
     "Deworming: effect on ln income in MK pop": 0.143,
     "Deworming: num yrs between deworming and benefits": 8,
-    "Deworming: duration of benefits": 40,
-    "Deworming: multiplier for sharing within households": 2.0,
+    "Deworming: duration of long-term benefits": 40,
+    "Deworming: multiplier for sharing w/in households": 2.0,
     "Deworming: adjustment for el nino": 0.65,
     "Deworming: adjustment for yrs of treatment in MK vs programs": 0.90,
     "Deworming: replicability adjustment": 0.11,
@@ -18,8 +18,8 @@ def long_term_income_effects(
     effect_on_ln_income_in_MK_pop,
     discount_rate,
     num_yrs_between_deworming_and_benefits,
-    duration_of_benefits,
-    multiplier_for_sharing_within_households,
+    duration_of_long_term_benefits,
+    multiplier_for_sharing_win_households,
     adjustment_for_el_nino,
     adjustment_for_yrs_of_treatment_in_MK_vs_programs,
     replicability_adjustment,
@@ -30,11 +30,11 @@ def long_term_income_effects(
         (1 + discount_rate) ** num_yrs_between_deworming_and_benefits
     )
     present_value_of_lifetime_benefits_from_year_of_deworming = present_value_of_annuity(  # TODO: end of period
-        discount_rate, duration_of_benefits, benefit_on_one_years_income
+        discount_rate, duration_of_long_term_benefits, benefit_on_one_years_income
     )
     adjusted_benefits_per_yr_of_deworming_in_ln_consumption = (
         present_value_of_lifetime_benefits_from_year_of_deworming
-        * multiplier_for_sharing_within_households
+        * multiplier_for_sharing_win_households
         * adjustment_for_el_nino
         * adjustment_for_yrs_of_treatment_in_MK_vs_programs
         * replicability_adjustment

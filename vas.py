@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
-vas_givewell = {
-    "VAS: num of children in cohort": 10000,
-    "VAS: cost per child per round": 1.35,
-    "VAS: rounds per yr": 2,
-}
+num_children_in_cohort = 10000
+
+vas_givewell = {"VAS: cost per child per round": 1.35, "VAS: rounds per yr": 2}
 
 cost_of_covering_a_hypothetical_cohort_with_vitamin_a_supplementation_givewell = {
     "VAS: coverage in RCTs": 0.873
@@ -12,12 +10,12 @@ cost_of_covering_a_hypothetical_cohort_with_vitamin_a_supplementation_givewell =
 
 
 def cost_of_covering_a_hypothetical_cohort_with_vitamin_a_supplementation(
-    cost_per_child_per_round, rounds_per_yr, num_of_children_in_cohort, coverage_in_RCTs
+    cost_per_child_per_round, rounds_per_yr, coverage_in_RCTs
 ):
     cost_for_cohort_per_year = (
         cost_per_child_per_round
         * rounds_per_yr
-        * num_of_children_in_cohort
+        * num_children_in_cohort
         * coverage_in_RCTs
     )
     return {"VAS: cost for cohort per yr": cost_for_cohort_per_year}
@@ -47,13 +45,12 @@ mortality_reduction_in_hypothetical_cohort_givewell = {
 def mortality_reduction_in_hypothetical_cohort(
     baseline_deaths_per_thousand_child_years_for_young_children,
     reduction_in_all_cause_mortality,
-    num_of_children_in_cohort,
     internal_validity_adjustment,
     external_validity_adjustment,
 ):
     expected_deaths_in_cohort_over_one_year_in_absence_of_VAS_program = (
         baseline_deaths_per_thousand_child_years_for_young_children
-        * num_of_children_in_cohort
+        * num_children_in_cohort
         / 1000
     )
     expected_deaths_averted_in_cohort_due_to_program_unadjusted = (

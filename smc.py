@@ -181,7 +181,7 @@ def mortality_reduction_in_untreated_population(
     external_validity_adjustment,
     adjustment_for_higher_percent_covered_in_trial_than_ACCESS,
     cost_to_cover_cohort,
-    value_of_averting_death_of_an_individual_5_or_older,
+    value_of_averting_death_of_a_person_5_or_older,
 ):
     number_of_malaria_attributable_deaths_prevented_in_untreated_population_per_1000_under_5s_targeted_prior_to_adjustments = (
         unadjusted_deaths_averted_per_1000_under_5s_targeted
@@ -204,7 +204,7 @@ def mortality_reduction_in_untreated_population(
         / expected_deaths_averted_in_untreated_population_after_adjustments
     )
     value_from_over_5_deaths_averted_per_dollar_wout_levfun = (
-        value_of_averting_death_of_an_individual_5_or_older
+        value_of_averting_death_of_a_person_5_or_older
         / cost_per_death_averted_in_untreated_population_before_accounting_for_leverage_and_funging
     )
 
@@ -216,9 +216,9 @@ def mortality_reduction_in_untreated_population(
 income_increase_ages_14_and_under_givewell = {
     "SMC: malaria prevalance young": 0.29,
     "SMC: malaria prevalence old": 0.29,
-    "SMC: annual increase in income for eliminating prob of infection in youth": 0.023,
+    "SMC: increase in income from eliminating prob of infection in youth": 0.023,
     "SMC: replicability adjustment for malaria vs income": 0.52,
-    "SMC: num yrs between program and long term benefits": 10,
+    "SMC: num yrs between program and long-term benefits": 10,
     "SMC: duration of long term benefits": 40,
     "SMC: multiplier for sharing w/in households": 2,
 }
@@ -233,7 +233,7 @@ def income_increases_age_14_and_under(
     external_validity_adjustment,
     reduction_in_untreated_pop_per_reduction_in_treated_pop,
     adjustment_for_higher_percent_covered_in_trial_than_ACCESS,
-    annual_increase_in_income_for_eliminating_prob_of_infection_in_youth,
+    increase_in_income_from_eliminating_prob_of_infection_in_youth,
     replicability_adjustment_for_malaria_vs_income,
     num_yrs_between_program_and_long_term_benefits,
     discount_rate,
@@ -268,9 +268,7 @@ def income_increases_age_14_and_under(
     )
     increase_in_ln_income_from_reducing_point_in_time_probability_of_malaria_infection_from_100_to_0_for_individual_for_one_year_between_ages_of_0_and_14 = (
         (
-            log(
-                1 + annual_increase_in_income_for_eliminating_prob_of_infection_in_youth
-            )
+            log(1 + increase_in_income_from_eliminating_prob_of_infection_in_youth)
             - log(1)
         )
         * replicability_adjustment_for_malaria_vs_income

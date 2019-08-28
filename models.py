@@ -4,6 +4,7 @@ from functools import partial
 
 import cash
 import moral_weights
+import nets
 import smc
 from tree import Model
 import vas
@@ -33,6 +34,20 @@ smc_treated_population = Model(
 
 worms_long_term_income_effects = Model(
     worms.long_term_income_effects, [["Moral weights"], ["Deworming", "Income effects"]]
+)
+
+amf_cost_per_yr = Model(nets.cost_per_yr_of_protection, [["AMF", "Cost"]])
+
+amf_pre_existing_nets = Model(nets.pre_existing_nets, [["AMF", "Pre-existing"]])
+
+amf_under_5 = Model(
+    nets.deaths_averted_children_under_5,
+    [
+        ["Moral weights"],
+        amf_cost_per_yr,
+        Model(nets.effectiveness, [["AMF", "Shared"], ["AMF", "Effectiveness"]]),
+        amf_pre_existing_nets,
+    ],
 )
 
 models = {
@@ -95,7 +110,6 @@ models = {
             Model(
                 vas.mortality_reduction_in_hypothetical_cohort,
                 [
-                    ["HKI", "Shared"],
                     ["HKI", "Mortality reduction"],
                     Model(
                         vas.meta_analysis_finding_on_relative_rate_of_mortality_reduction,
@@ -111,6 +125,33 @@ models = {
                     ["HKI", "Development"],
                     worms_long_term_income_effects,
                 ],
+            ),
+        ],
+    ),
+    "AMF": Model(
+        nets.results,
+        [
+            ["AMF", "Results"],
+            Model(
+                nets.income_increase_under_15,
+                [
+                    ["Moral weights"],
+                    ["AMF", "Income increase"],
+                    amf_cost_per_yr,
+                    Model(
+                        nets.reduction_in_prevalence_from_net_distributions,
+                        [
+                            ["AMF", "Shared"],
+                            ["AMF", "Prevalence reduction"],
+                            amf_pre_existing_nets,
+                        ],
+                    ),
+                ],
+            ),
+            amf_under_5,
+            Model(
+                nets.deaths_averted_over_5,
+                [["Moral weights"], ["AMF", "Deaths over 5"], amf_under_5],
             ),
         ],
     ),
@@ -143,5 +184,15 @@ givewell = {
         "Mortality reduction": vas.mortality_reduction_in_hypothetical_cohort_givewell,
         "Development": vas.development_benefits_givewell,
         "Results": vas.results_givewell,
+    },
+    "AMF": {
+        "Shared": nets.nets_givewell,
+        "Effectiveness": nets.effectiveness_givewell,
+        "Pre-existing": nets.pre_existing_nets_givewell,
+        "Prevalence reduction": nets.reduction_in_prevalence_from_net_distributions_givewell,
+        "Cost": nets.cost_per_yr_of_protection_givewell,
+        "Deaths over 5": nets.deaths_averted_over_5_givewell,
+        "Income increase": nets.income_increase_under_15_givewell,
+        "Results": nets.results_givewell,
     },
 }
