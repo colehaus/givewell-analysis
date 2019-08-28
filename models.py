@@ -6,6 +6,7 @@ import cash
 import moral_weights
 import smc
 from tree import Model
+import vas
 import worms
 
 smc_effectiveness = Model(
@@ -82,6 +83,37 @@ models = {
             ),
         ],
     ),
+    "HKI": Model(
+        vas.results,
+        [
+            ["Moral weights"],
+            ["HKI", "Results"],
+            Model(
+                vas.cost_of_covering_a_hypothetical_cohort_with_vitamin_a_supplementation,
+                [["HKI", "Shared"], ["HKI", "Cost"]],
+            ),
+            Model(
+                vas.mortality_reduction_in_hypothetical_cohort,
+                [
+                    ["HKI", "Shared"],
+                    ["HKI", "Mortality reduction"],
+                    Model(
+                        vas.meta_analysis_finding_on_relative_rate_of_mortality_reduction,
+                        [["HKI", "Meta-analysis"]],
+                    ),
+                ],
+            ),
+            Model(
+                vas.development_benefits,
+                [
+                    ["Moral weights"],
+                    ["HKI", "Shared"],
+                    ["HKI", "Development"],
+                    worms_long_term_income_effects,
+                ],
+            ),
+        ],
+    ),
 }
 
 givewell = {
@@ -103,5 +135,13 @@ givewell = {
         "Untreated population": smc.untreated_population_givewell,
         "Income increase": smc.income_increase_ages_14_and_under_givewell,
         "Results": smc.results_givewell,
+    },
+    "HKI": {
+        "Shared": vas.vas_givewell,
+        "Cost": vas.cost_of_covering_a_hypothetical_cohort_with_vitamin_a_supplementation_givewell,
+        "Meta-analysis": vas.meta_analysis_finding_on_relative_rate_of_mortality_reduction_givewell,
+        "Mortality reduction": vas.mortality_reduction_in_hypothetical_cohort_givewell,
+        "Development": vas.development_benefits_givewell,
+        "Results": vas.results_givewell,
     },
 }

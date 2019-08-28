@@ -32,7 +32,7 @@ def long_term_income_effects(
     present_value_of_lifetime_benefits_from_year_of_deworming = present_value_of_annuity(  # TODO: end of period
         discount_rate, duration_of_benefits, benefit_on_one_years_income
     )
-    adjusted_benefits_per_yr_of_deworming = (
+    adjusted_benefits_per_yr_of_deworming_in_ln_consumption = (
         present_value_of_lifetime_benefits_from_year_of_deworming
         * multiplier_for_sharing_within_households
         * adjustment_for_el_nino
@@ -41,7 +41,7 @@ def long_term_income_effects(
         / additional_yrs_for_treatment_group_in_MK
     )
     return {
-        "Deworming: adjusted benefits per yr of deworming": adjusted_benefits_per_yr_of_deworming
+        "Deworming: adjusted benefits per yr of deworming in ln consumption": adjusted_benefits_per_yr_of_deworming_in_ln_consumption
     }
 
 
@@ -72,7 +72,7 @@ end_givewell = {
 
 def charity_specific(
     name,
-    adjusted_benefits_per_yr_of_deworming,
+    adjusted_benefits_per_yr_of_deworming_in_ln_consumption,
     worm_intensity_adjustment,
     value_of_increasing_ln_consumption_per_capita_per_annum,
     cost_per_capita_per_annum,
@@ -80,7 +80,7 @@ def charity_specific(
 ):
     proportion_of_deworming_going_to_children = 1.00
     present_value_of_lifetime_benefits_from_year_of_deworming = (
-        adjusted_benefits_per_yr_of_deworming
+        adjusted_benefits_per_yr_of_deworming_in_ln_consumption
         * proportion_of_deworming_going_to_children
         * worm_intensity_adjustment
     )
@@ -89,5 +89,5 @@ def charity_specific(
         * value_of_increasing_ln_consumption_per_capita_per_annum
     )
     value_per_dollar = value_from_each_year_of_deworming / cost_per_capita_per_annum
-    value_per_dollar_after_levfun = value_per_dollar * (1 + expected_value_from_levfun)
-    return {name + ": value per dollar after lev/fun": value_per_dollar_after_levfun}
+    value_per_dollar_w_levfun = value_per_dollar * (1 + expected_value_from_levfun)
+    return {name + ": value per dollar w/ lev/fun": value_per_dollar_w_levfun}

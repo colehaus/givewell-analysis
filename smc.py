@@ -114,7 +114,7 @@ def costs(cost_per_child_targeted):
 hypothetical_cohort_size = 1000000
 
 treated_population_givewell = {
-    "SMC: young all cause mortality per 1000 per annum": 14.2,
+    "SMC: young all-cause mortality per 1000 per annum": 14.2,
     "SMC: percent of young deaths due to malaria": 0.27,
     "SMC: indirect to direct malaria deaths": 0.5,
     "SMC: reduction in mortality per incidence": 1.0,

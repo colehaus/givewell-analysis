@@ -108,7 +108,13 @@ def extract_only_key(d):
 
 
 def sanitize_label(s):
-    return trim_prefix(s).replace(" ", "_").replace(".", "").replace("/", "")
+    return (
+        trim_prefix(s)
+        .replace(" ", "_")
+        .replace(".", "")
+        .replace("/", "")
+        .replace("-", "_")
+    )
 
 
 def trim_prefix(key):
