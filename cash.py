@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from pymc3 import math
+from pymc3.math import log
+
 from utility import present_value_of_annuity
 
 cash_transfers_givewell = {
@@ -38,14 +39,14 @@ def cash_transfers(
     annual_increase_in_consumption_due_to_investment_returns = (
         amount_invested * return_on_investment
     )
-    total_increase_in_ln_consumption_due_to_funds_transferred = math.log(
+    total_increase_in_ln_consumption_due_to_funds_transferred = log(
         baseline_consumption_per_capita
         + total_increase_in_consumption_due_to_funds_transferred
-    ) - math.log(baseline_consumption_per_capita)
-    future_annual_increase_in_ln_consumption_from_return_on_investments = math.log(
+    ) - log(baseline_consumption_per_capita)
+    future_annual_increase_in_ln_consumption_from_return_on_investments = log(
         baseline_consumption_per_capita
         + annual_increase_in_consumption_due_to_investment_returns
-    ) - math.log(baseline_consumption_per_capita)
+    ) - log(baseline_consumption_per_capita)
     present_value_of_future_increases_in_ln_consumption_excluding_final_year = present_value_of_annuity(
         discount_rate,
         duration_of_investment_benefits - 1,
@@ -56,10 +57,8 @@ def cash_transfers(
         + amount_invested * percent_of_investment_returned_when_benefits_end
     )
     present_value_of_ln_consumption_increase_in_final_year = (
-        math.log(
-            baseline_consumption_per_capita + _additional_consumption_in_final_year
-        )
-        - math.log(baseline_consumption_per_capita)
+        log(baseline_consumption_per_capita + _additional_consumption_in_final_year)
+        - log(baseline_consumption_per_capita)
     ) / (1 + discount_rate) ** duration_of_investment_benefits
     present_value_of_all_future_increases_in_ln_consumption = (
         present_value_of_ln_consumption_increase_in_final_year

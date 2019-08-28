@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-import utility
-from pymc3 import math
+from pymc3.math import log
+
+from utility import present_value_of_annuity
 
 smc_givewell = {
     "SMC: cost per child targeted": 4.536588,
@@ -267,10 +268,10 @@ def income_increases_age_14_and_under(
     )
     increase_in_ln_income_from_reducing_point_in_time_probability_of_malaria_infection_from_100_to_0_for_individual_for_one_year_between_ages_of_0_and_14 = (
         (
-            math.log(
+            log(
                 1 + annual_increase_in_income_for_eliminating_prob_of_infection_in_youth
             )
-            - math.log(1)
+            - log(1)
         )
         * replicability_adjustment_for_malaria_vs_income
     )
@@ -278,7 +279,7 @@ def income_increases_age_14_and_under(
         increase_in_ln_income_from_reducing_point_in_time_probability_of_malaria_infection_from_100_to_0_for_individual_for_one_year_between_ages_of_0_and_14
         / (1 + discount_rate) ** num_yrs_between_program_and_long_term_benefits
     )
-    present_value_of_lifetime_benefits_from_reducing_prevalence_from_1_to_0_for_an_individual_for_one_year_between_ages_of_0_and_14 = utility.present_value_of_annuity(
+    present_value_of_lifetime_benefits_from_reducing_prevalence_from_1_to_0_for_an_individual_for_one_year_between_ages_of_0_and_14 = present_value_of_annuity(
         discount_rate, duration_of_long_term_benefits, benefit_on_one_years_income
     )  # TODO: end of period
     present_value_of_benefits_from_reducing_point_in_time_probability_of_malaria_infection_from_100_to_0_for_individual_for_one_year_between_ages_of_0_and_14 = (

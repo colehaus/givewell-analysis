@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import utility
+from utility import present_value_of_annuity
 
 long_term_income_effects_givewell = {
     "Deworming: effect on ln income in MK pop": 0.143,
@@ -29,7 +29,7 @@ def long_term_income_effects(
     benefit_on_one_years_income = effect_on_ln_income_in_MK_pop / (
         (1 + discount_rate) ** num_yrs_between_deworming_and_benefits
     )
-    present_value_of_lifetime_benefits_from_year_of_deworming = utility.present_value_of_annuity(  # TODO: end of period
+    present_value_of_lifetime_benefits_from_year_of_deworming = present_value_of_annuity(  # TODO: end of period
         discount_rate, duration_of_benefits, benefit_on_one_years_income
     )
     adjusted_benefits_per_yr_of_deworming = (
