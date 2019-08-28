@@ -62,11 +62,10 @@ pre_existing_nets_givewell = {
 def pre_existing_nets(
     percent_of_people_own_nets_wout_distribution, percent_of_extra_nets_distributed_used
 ):
-    # TODO: Check this in spreadsheet
     adjustment_for_pre_existing_nets = (
         1
         - percent_of_people_own_nets_wout_distribution
-        * percent_of_extra_nets_distributed_used
+        * (1 - percent_of_extra_nets_distributed_used)
     )
     return {"adjustment for pre-existing nets": adjustment_for_pre_existing_nets}
 
