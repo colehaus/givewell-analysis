@@ -5,17 +5,17 @@ from pymc3.math import log
 from utility import present_value_of_annuity
 
 nets_givewell = {
-    "net use adjustment": 0.90,
-    "internal validity adjustment": 0.95,
-    "percent of mortality due to malaria in AMF areas vs trials": 1.00,
-    "efficacy reduction due to insecticide resistance": 0.25,
+    "AMF: net use adjustment": 0.90,
+    "AMF: internal validity adjustment": 0.95,
+    "AMF: percent of mortality due to malaria in AMF areas vs trials": 1.00,
+    "AMF: efficacy reduction due to insecticide resistance": 0.25,
 }
 
 effectiveness_givewell = {
-    "deaths averted per protected child under 5": 0.00553,
-    "under 5 all cause mortality in trials": 34.8,
-    "under 5 all cause mortality in AMF areas": 13.8,
-    "percent of mortality differerence due to ITNs": 0.25,
+    "AMF: deaths averted per protected child under 5": 0.00553,
+    "AMF: under 5 all cause mortality in trials": 34.8,
+    "AMF: under 5 all cause mortality in AMF areas": 13.8,
+    "AMF: percent of mortality differerence due to ITNs": 0.25,
 }
 
 
@@ -49,13 +49,13 @@ def effectiveness(
         * percent_of_mortality_due_to_malaria_in_AMF_areas_vs_trials
     )
     return {
-        "adjusted deaths averted per child under 5 targeted": adjusted_deaths_averted_per_child_under_5_targeted
+        "AMF: adjusted deaths averted per child under 5 targeted": adjusted_deaths_averted_per_child_under_5_targeted
     }
 
 
 pre_existing_nets_givewell = {
-    "percent of people own nets w/out distribution": 0.20,
-    "percent of extra nets distributed used": 0.50,
+    "AMF: percent of people own nets w/out distribution": 0.20,
+    "AMF: percent of extra nets distributed used": 0.50,
 }
 
 
@@ -67,14 +67,14 @@ def pre_existing_nets(
         - percent_of_people_own_nets_wout_distribution
         * (1 - percent_of_extra_nets_distributed_used)
     )
-    return {"adjustment for pre-existing nets": adjustment_for_pre_existing_nets}
+    return {"AMF: adjustment for pre-existing nets": adjustment_for_pre_existing_nets}
 
 
 reduction_in_prevalence_from_net_distributions_givewell = {
-    "reduction in incidence for children under 5": 0.50,
-    "malaria prevalance in AMF areas under 5": 0.14,
-    "malaria prevalance in AMF areas 5 to 14": 0.18,
-    "increase in malaria prevalance in absence of LLIN distribution": 0.20,
+    "AMF: reduction in incidence for children under 5": 0.50,
+    "AMF: malaria prevalance in AMF areas under 5": 0.14,
+    "AMF: malaria prevalance in AMF areas 5 to 14": 0.18,
+    "AMF: increase in malaria prevalance in absence of LLIN distribution": 0.20,
 }
 
 
@@ -114,18 +114,18 @@ def reduction_in_prevalence_from_net_distributions(
         * adjusted_malaria_prevalence_in_AMF_areas_5_to_14
     )
     return {
-        "reduction in prob. of covered child being infected under 5": reduction_in_prob_of_covered_child_being_infected_under_5,
-        "reduction in prob. of covered child being infected 5 to 14": reduction_in_prob_of_covered_child_being_infected_5_to_14,
+        "AMF: reduction in prob. of covered child being infected under 5": reduction_in_prob_of_covered_child_being_infected_under_5,
+        "AMF: reduction in prob. of covered child being infected 5 to 14": reduction_in_prob_of_covered_child_being_infected_5_to_14,
     }
 
 
 cost_per_yr_of_protection_givewell = {
-    "pre-distribution wastage": 0.05,
-    "cost per LLIN": 4.525938148,
-    "num LLINs distributed per person": 0.5555556,
-    "percent of pop. under 5": 0.17,
-    "percent of pop. 5 to 14": 0.31,
-    "lifespan of an LLIN": 2.22,
+    "AMF: pre-distribution wastage": 0.05,
+    "AMF: cost per LLIN": 4.525938148,
+    "AMF: num LLINs distributed per person": 0.5555556,
+    "AMF: percent of pop. under 5": 0.17,
+    "AMF: percent of pop. 5 to 14": 0.31,
+    "AMF: lifespan of an LLIN": 2.22,
 }
 
 arbitrary_donation_size = 1000000
@@ -160,9 +160,9 @@ def cost_per_yr_of_protection(
         arbitrary_donation_size / person_yrs_of_coverage_for_under_15s
     )
     return {
-        "person-yrs of coverage for under 5s": person_yrs_of_coverage_for_under_5s,
-        "person-yrs of coverage for 5 to 14s": person_yrs_of_coverage_for_5_to_14s,
-        "cost per person-yr of protection for under 15s": cost_per_person_yr_of_protection_for_under_15s,
+        "AMF: person-yrs of coverage for under 5s": person_yrs_of_coverage_for_under_5s,
+        "AMF: person-yrs of coverage for 5 to 14s": person_yrs_of_coverage_for_5_to_14s,
+        "AMF: cost per person-yr of protection for under 15s": cost_per_person_yr_of_protection_for_under_15s,
     }
 
 
@@ -185,14 +185,14 @@ def deaths_averted_children_under_5(
         / cost_per_under_5_death_averted_wout_levfun
     )
     return {
-        "under 5 deaths averted per million dollars": under_5_deaths_averted_per_million_dollars,
-        "value from under 5 deaths averted per dollar w/out lev/fun": value_from_under_5_deaths_averted_per_dollar_wout_levfun,
+        "AMF: under 5 deaths averted per million dollars": under_5_deaths_averted_per_million_dollars,
+        "AMF: value from under 5 deaths averted per dollar w/out lev/fun": value_from_under_5_deaths_averted_per_dollar_wout_levfun,
     }
 
 
 deaths_averted_over_5_givewell = {
-    "ratio_of_5_and_over_to_under_5_malaria_deaths": 0.38,
-    "relative_efficacy_of_LLINs_for_people_over_5": 0.80,
+    "AMF: ratio_of_5_and_over_to_under_5_malaria_deaths": 0.38,
+    "AMF: relative_efficacy_of_LLINs_for_people_over_5": 0.80,
 }
 
 
@@ -216,7 +216,7 @@ def deaths_averted_over_5(
         / cost_per_over_5_death_averted_wout_levfun
     )
     return {
-        "value from over 5 deaths averted per dollar w/out lev/fun": value_from_over_5_deaths_averted_per_dollar_wout_levfun
+        "AMF: value from over 5 deaths averted per dollar w/out lev/fun": value_from_over_5_deaths_averted_per_dollar_wout_levfun
     }
 
 
@@ -285,11 +285,11 @@ def income_increase_under_15(
         value_from_development_benefits_per_million_donated / arbitrary_donation_size
     )
     return {
-        "value from development benefits per dollar w/out lev/fun": value_from_development_benefits_per_dollar_wout_levfun
+        "AMF: value from development benefits per dollar w/out lev/fun": value_from_development_benefits_per_dollar_wout_levfun
     }
 
 
-results_givewell = {"expected cost from lev/fun": 0.1568}
+results_givewell = {"AMF: expected cost from lev/fun": 0.1568}
 
 
 def results(
@@ -306,4 +306,4 @@ def results(
     value_per_dollar_w_levfun = value_per_dollar_wout_levfun * (
         1 - expected_cost_from_levfun
     )
-    return {"value per dollar w/ lev/fun": value_per_dollar_w_levfun}
+    return {"AMF: value per dollar w/ lev/fun": value_per_dollar_w_levfun}
