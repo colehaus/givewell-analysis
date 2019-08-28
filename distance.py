@@ -12,6 +12,8 @@ value_per_dollar = {
     "SCI": 378 / ten_k,
     "Sightsavers": 394 / ten_k,
     "Malaria Consortium": 326 / ten_k,
+    "AMF": 247 / ten_k,
+    "HKI": 223 / ten_k,
 }
 
 ranked_list = utility.keys_sorted_by_value(value_per_dollar)
