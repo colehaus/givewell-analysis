@@ -170,21 +170,26 @@ def plot_uncertainties_small_multiples(trace, results):
         sns.kdeplot(trace[var], ax=ax, label=charity, gridsize=500)
         ax.set_xlim(0, 0.25)
 
+    fig.patch.set_alpha(0)
+    plt.savefig("plots/uncertainties-small-multiples.png")
     # fig.tight_layout(rect=[0, 0.01, 1, 0.97])
 
 
 def plot_uncertainties_overlaid(trace, results):
+    fig = plt.figure(tight_layout=True)
     for charity, var in results.items():
         mean = np.mean(trace[var])
         normed = trace[var] / mean
         ax = sns.kdeplot(normed, label=charity, gridsize=500)
         ax.set_xlim(-0, 2)
+    fig.patch.set_alpha(0)
+    plt.savefig("plots/uncertainties-overlaid.png")
 
 
 # Regressions
 
 
-def plot_regressions(ordering, charity, df, spec, should_trim_prefix=True):
+def plot_regressions(typ, ordering, charity, df, spec, should_trim_prefix=True):
     combos = list(product(spec.ins, spec.outs))
     # The `ordering` dict only includes input variables (rather than intermediate calculations) so we don't worry about sorting anything else
     combos_sorted = (
@@ -194,7 +199,6 @@ def plot_regressions(ordering, charity, df, spec, should_trim_prefix=True):
     )
     rows, cols = grid_dims(len(combos_sorted))
 
-    print(charity)
     fig = plt.figure(tight_layout=True, figsize=(3 * cols, 3 * rows))
     # Title with `tight_layout` requires `rect`. `tight_layout` with many rows (?) crashes. So we omit the title for now.
     # st = fig.suptitle("Visual sensitivity analysis of results for " + charity)
@@ -220,28 +224,36 @@ def plot_regressions(ordering, charity, df, spec, should_trim_prefix=True):
         ax.set_ylabel("\n".join(wrap(trim(o), 20)))
 
     # fig.tight_layout()
+    out_str = "-".join([sanitize_label(k) for k in spec.outs])
+    fig.patch.set_alpha(0)
+    plt.savefig("plots/regressions-" + charity + "-" + typ + "-" + out_str + ".png")
 
 
 def plot_big_step_regressions(ordering, models_with_variables, df):
     for charity, model in models_with_variables.items():
-        plot_regressions(ordering, charity, df, big_step_chart_spec(model))
+        plot_regressions("big", ordering, charity, df, big_step_chart_spec(model))
 
 
 def plot_small_step_regressions(ordering, models_with_variables, df):
     for charity, model in models_with_variables.items():
         for spec in small_step_chart_specs(model):
             # This is a hacky way to remove the second unwanted (for graphing) output from one of the calculations
-            outs = filter(
-                lambda x: x
-                != "SMC: unadjusted deaths averted per 1000 under 5s targeted",
-                spec.outs,
+            outs = list(
+                filter(
+                    lambda x: x
+                    != "SMC: unadjusted deaths averted per 1000 under 5s targeted",
+                    spec.outs,
+                )
             )
-            plot_regressions(ordering, charity, df, ChartSpec(ins=spec.ins, outs=outs))
+            plot_regressions(
+                "small", ordering, charity, df, ChartSpec(ins=spec.ins, outs=outs)
+            )
 
 
 def plot_angle_regressions(ordering, models_with_variables, df):
     params = all_params_from_models(models_with_variables)
     plot_regressions(
+        "max",
         ordering,
         "overall ranking",
         df,
@@ -318,12 +330,18 @@ def sensitivities_to_dataframe(sa, should_trim_prefix=True):
     return DataFrame(S1), DataFrame(delta)
 
 
-def plot_sensitivities(sa, should_trim_prefix=True):
+def plot_sensitivities(size, charity, index, sa, should_trim_prefix=True):
     S1, delta = sensitivities_to_dataframe(sa, should_trim_prefix)
-    plt.figure(figsize=(6, ceil(len(sa["names"]) / 3)))
+    fig = plt.figure(tight_layout=True, figsize=(6, ceil(len(sa["names"]) / 3)))
     sns.pointplot(x="delta sensitivity", y="variable", data=delta, join=False)
-    plt.figure(figsize=(6, ceil(len(sa["names"]) / 3)))
+    fig.patch.set_alpha(0)
+    plt.savefig(
+        "plots/sensitivity-" + size + "-" + charity + "-" + str(index) + "-delta.png"
+    )
+    fig = plt.figure(figsize=(6, ceil(len(sa["names"]) / 3)))
     sns.pointplot(x="S1 sensitivity", y="variable", data=S1, join=False)
+    fig.patch.set_alpha(0)
+    plt.savefig("plots/sensitivity-" + size + "-" + charity + "-" + str(index) + "-s1.png")
 
 
 # Main
@@ -354,9 +372,7 @@ def main(params, num_samples):
 
     results = results_from_models(models_with_variables)
 
-    plt.figure()
     plot_uncertainties_small_multiples(trace, results)
-    plt.figure()
     plot_uncertainties_overlaid(trace, results)
 
     small_step_sensitivities = calculate_small_step_sensitivities(
@@ -374,8 +390,9 @@ def main(params, num_samples):
     plot_big_step_regressions(ordering, models_with_variables, df)
     plot_angle_regressions(ordering, models_with_variables, df)
 
-    plot_sensitivities(angle_sensitivities, should_trim_prefix=False)
-    for sensitivities in list(big_step_sensitivities.values()) + flatten_lists(
-        list(small_step_sensitivities.values())
-    ):
-        plot_sensitivities(sensitivities)
+    plot_sensitivities("max", "overall ranking", 0, angle_sensitivities, should_trim_prefix=False)
+    for charity, sensitivities in big_step_sensitivities.items():
+        plot_sensitivities("big", charity, 0, sensitivities)
+    for charity, sensitivities in small_step_sensitivities.items():
+        for i, s in enumerate(sensitivities):
+            plot_sensitivities("small", charity, i, s)
