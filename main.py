@@ -125,53 +125,57 @@ def compute_distances(models, trace):
 # Uncertainty
 
 
-def plot_uncertainties_small_multiples(trace, results):
+def plot_uncertainties_small_multiples(trace, results, show_distance):
     rows, cols = grid_dims(len(results))
 
-    fig = plt.figure(tight_layout=True, figsize=(3 * cols, 3 * (1 + rows)))
+    fig_height = 3 * (1 + rows) if show_distance else 3 * rows
+    fig = plt.figure(tight_layout=True, figsize=(3 * cols, fig_height))
 
     # st = fig.suptitle(
     #     "Uncertainty for key outputs in Givewell's cost-effectiveness estimates"
     # )
 
     gs = fig.add_gridspec(ncols=cols, nrows=rows + 1)
-    distances = fig.add_subplot(gs[0, :])
+    if show_distance:
+        distances = fig.add_subplot(gs[0, :])
+        sns.kdeplot(
+            trace.angle,
+            ax=distances,
+            label="Angle (in radians)",
+            gridsize=500,
+            clip=(0, pi),
+        )
+        sns.kdeplot(
+            trace.tau,
+            ax=distances,
+            bw=0.8,
+            label="Kendall's tau",
+            gridsize=500,
+            clip=(0, 1),
+        )
+        sns.kdeplot(
+            trace.footrule,
+            ax=distances,
+            bw=0.8,
+            label="Spearman's footrule",
+            gridsize=500,
+            clip=(0, 1),
+        )
+        distances.set_xlim(-0.5, 1)
+
+    row_offset = 1 if show_distance else 0
     result_plots = [
-        (fig.add_subplot(gs[1 + floor(i / cols), i % cols]), v)
+        (fig.add_subplot(gs[row_offset + floor(i / cols), i % cols]), v)
         for i, v in enumerate(results.items())
     ]
-
-    sns.kdeplot(
-        trace.angle,
-        ax=distances,
-        label="Angle (in radians)",
-        gridsize=500,
-        clip=(0, pi),
-    )
-    sns.kdeplot(
-        trace.tau,
-        ax=distances,
-        bw=0.8,
-        label="Kendall's tau",
-        gridsize=500,
-        clip=(0, 1),
-    )
-    sns.kdeplot(
-        trace.footrule,
-        ax=distances,
-        bw=0.8,
-        label="Spearman's footrule",
-        gridsize=500,
-        clip=(0, 1),
-    )
-    distances.set_xlim(-0.5, 1)
 
     for (ax, (charity, var)) in result_plots:
         sns.kdeplot(trace[var], ax=ax, label=charity, gridsize=500)
         ax.set_xlim(0, 0.25)
 
     fig.patch.set_alpha(0)
-    plt.savefig("plots/uncertainties-small-multiples.png")
+    distance_str = "distances" if show_distance else ""
+    plt.savefig("plots/uncertainties-small-multiples-" + distance_str + ".png")
     # fig.tight_layout(rect=[0, 0.01, 1, 0.97])
 
 
@@ -341,13 +345,15 @@ def plot_sensitivities(size, charity, index, sa, should_trim_prefix=True):
     fig = plt.figure(figsize=(6, ceil(len(sa["names"]) / 3)))
     sns.pointplot(x="S1 sensitivity", y="variable", data=S1, join=False)
     fig.patch.set_alpha(0)
-    plt.savefig("plots/sensitivity-" + size + "-" + charity + "-" + str(index) + "-s1.png")
+    plt.savefig(
+        "plots/sensitivity-" + size + "-" + charity + "-" + str(index) + "-s1.png"
+    )
 
 
 # Main
 
 
-def main(params, num_samples):
+def main(params, num_samples, include_small_steps):
     sns.set(style="darkgrid")
 
     model_context = pm.Model()
@@ -372,12 +378,10 @@ def main(params, num_samples):
 
     results = results_from_models(models_with_variables)
 
-    plot_uncertainties_small_multiples(trace, results)
+    plot_uncertainties_small_multiples(trace, results, show_distance=True)
+    plot_uncertainties_small_multiples(trace, results, show_distance=False)
     plot_uncertainties_overlaid(trace, results)
 
-    small_step_sensitivities = calculate_small_step_sensitivities(
-        trace, models_with_variables
-    )
     big_step_sensitivities = calculate_big_step_sensitivities(
         trace, models_with_variables
     )
@@ -386,13 +390,19 @@ def main(params, num_samples):
         map(lambda x: (x[1], x[0]), enumerate(angle_sensitivities["names"]))
     )
 
-    plot_small_step_regressions(ordering, models_with_variables, df)
     plot_big_step_regressions(ordering, models_with_variables, df)
     plot_angle_regressions(ordering, models_with_variables, df)
 
-    plot_sensitivities("max", "overall ranking", 0, angle_sensitivities, should_trim_prefix=False)
+    plot_sensitivities(
+        "max", "overall ranking", 0, angle_sensitivities, should_trim_prefix=False
+    )
     for charity, sensitivities in big_step_sensitivities.items():
         plot_sensitivities("big", charity, 0, sensitivities)
-    for charity, sensitivities in small_step_sensitivities.items():
-        for i, s in enumerate(sensitivities):
-            plot_sensitivities("small", charity, i, s)
+    if include_small_steps:
+        small_step_sensitivities = calculate_small_step_sensitivities(
+            trace, models_with_variables
+        )
+        plot_small_step_regressions(ordering, models_with_variables, df)
+        for charity, sensitivities in small_step_sensitivities.items():
+            for i, s in enumerate(sensitivities):
+                plot_sensitivities("small", charity, i, s)
