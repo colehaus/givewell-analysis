@@ -195,7 +195,9 @@ def plot_uncertainties_overlaid(trace, results, save_plots):
 # Regressions
 
 
-def plot_regressions(typ, ordering, charity, df, spec, save_plots, should_trim_prefix=True):
+def plot_regressions(
+    typ, ordering, charity, df, spec, save_plots, should_trim_prefix=True
+):
     combos = list(product(spec.ins, spec.outs))
     # The `ordering` dict only includes input variables (rather than intermediate calculations) so we don't worry about sorting anything else
     combos_sorted = (
@@ -236,12 +238,14 @@ def plot_regressions(typ, ordering, charity, df, spec, save_plots, should_trim_p
         plt.savefig("plots/regressions-" + typ + "-" + charity + "-" + out_str + ".png")
 
 
-def plot_big_step_regressions(ordering, models_with_variables, df):
+def plot_big_step_regressions(ordering, models_with_variables, df, save_plots):
     for charity, model in models_with_variables.items():
-        plot_regressions("big", ordering, charity, df, big_step_chart_spec(model))
+        plot_regressions(
+            "big", ordering, charity, df, big_step_chart_spec(model), save_plots
+        )
 
 
-def plot_small_step_regressions(ordering, models_with_variables, df):
+def plot_small_step_regressions(ordering, models_with_variables, df, save_plots):
     for charity, model in models_with_variables.items():
         for spec in small_step_chart_specs(model):
             # This is a hacky way to remove the second unwanted (for graphing) output from one of the calculations
@@ -253,11 +257,16 @@ def plot_small_step_regressions(ordering, models_with_variables, df):
                 )
             )
             plot_regressions(
-                "small", ordering, charity, df, ChartSpec(ins=spec.ins, outs=outs)
+                "small",
+                ordering,
+                charity,
+                df,
+                ChartSpec(ins=spec.ins, outs=outs),
+                save_plots,
             )
 
 
-def plot_angle_regressions(ordering, models_with_variables, df):
+def plot_angle_regressions(ordering, models_with_variables, df, save_plots):
     params = all_params_from_models(models_with_variables)
     plot_regressions(
         "max",
@@ -265,6 +274,7 @@ def plot_angle_regressions(ordering, models_with_variables, df):
         "overall ranking",
         df,
         ChartSpec(ins=params, outs=["angle"]),
+        save_plots,
         should_trim_prefix=False,
     )
 
@@ -350,6 +360,7 @@ def plot_sensitivities(namer, sa, save_plots, should_trim_prefix=True):
         fig.patch.set_alpha(0)
         plt.savefig(namer("s1"))
 
+
 # Main
 
 
@@ -400,8 +411,12 @@ def main(params, num_samples, phases, save_plots=False):
             trace, models_with_variables
         )
         for charity, sensitivities in big_step_sensitivities.items():
+
             def namer(sensitivity_type):
-                return "plots/sensitivity-big-" + charity + "-" + sensitivity_type + ".png"
+                return (
+                    "plots/sensitivity-big-" + charity + "-" + sensitivity_type + ".png"
+                )
+
             plot_sensitivities(namer, sensitivities, save_plots)
 
     if "distances" in phases:
@@ -409,13 +424,12 @@ def main(params, num_samples, phases, save_plots=False):
             trace, results, save_plots, show_distance=True
         )
         plot_angle_regressions(ordering, models_with_variables, df, save_plots)
+
         def namer(sensitivity_type):
             return "plots/sensitivity-max-" + sensitivity_type + ".png"
+
         plot_sensitivities(
-            namer,
-            angle_sensitivities,
-            save_plots,
-            should_trim_prefix=False,
+            namer, angle_sensitivities, save_plots, should_trim_prefix=False
         )
 
     if "small steps" in phases:
@@ -425,6 +439,16 @@ def main(params, num_samples, phases, save_plots=False):
         plot_small_step_regressions(ordering, models_with_variables, df, save_plots)
         for charity, sensitivities in small_step_sensitivities.items():
             for i, s in enumerate(sensitivities):
+
                 def namer(sensitivity_type):
-                    return "plots/sensitivity-small-" + charity + "-" + str(i) + "-" + sensitivity_type + ".png"
+                    return (
+                        "plots/sensitivity-small-"
+                        + charity
+                        + "-"
+                        + str(i)
+                        + "-"
+                        + sensitivity_type
+                        + ".png"
+                    )
+
                 plot_sensitivities(namer, s, save_plots)
