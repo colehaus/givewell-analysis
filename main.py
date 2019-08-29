@@ -135,7 +135,8 @@ def plot_uncertainties_small_multiples(trace, results, show_distance):
     #     "Uncertainty for key outputs in Givewell's cost-effectiveness estimates"
     # )
 
-    gs = fig.add_gridspec(ncols=cols, nrows=rows + 1)
+    row_offset = 1 if show_distance else 0
+    gs = fig.add_gridspec(ncols=cols, nrows=rows + row_offset)
     if show_distance:
         distances = fig.add_subplot(gs[0, :])
         sns.kdeplot(
@@ -163,7 +164,6 @@ def plot_uncertainties_small_multiples(trace, results, show_distance):
         )
         distances.set_xlim(-0.5, 1)
 
-    row_offset = 1 if show_distance else 0
     result_plots = [
         (fig.add_subplot(gs[row_offset + floor(i / cols), i % cols]), v)
         for i, v in enumerate(results.items())
@@ -174,8 +174,8 @@ def plot_uncertainties_small_multiples(trace, results, show_distance):
         ax.set_xlim(0, 0.25)
 
     fig.patch.set_alpha(0)
-    distance_str = "distances" if show_distance else ""
-    plt.savefig("plots/uncertainties-small-multiples-" + distance_str + ".png")
+    distance_str = "-distances" if show_distance else ""
+    plt.savefig("plots/uncertainties-small-multiples" + distance_str + ".png")
     # fig.tight_layout(rect=[0, 0.01, 1, 0.97])
 
 
@@ -353,7 +353,7 @@ def plot_sensitivities(size, charity, index, sa, should_trim_prefix=True):
 # Main
 
 
-def main(params, num_samples, include_small_steps):
+def main(params, num_samples, phases):
     sns.set(style="darkgrid")
 
     model_context = pm.Model()
@@ -367,38 +367,47 @@ def main(params, num_samples, include_small_steps):
     with model_context:
         trace = pm.sample(num_samples)
 
-    angles, taus, footrules = compute_distances(models_with_variables, trace)
-    trace.add_values({"angle": angles, "tau": taus, "footrule": footrules})
-
-    df = pm.trace_to_dataframe(trace)
-    # Have to add these manually because pymc3 doesn't seem to do so in the line above
-    df["angle"] = angles
-    df["tau"] = taus
-    df["footrule"] = footrules
-
     results = results_from_models(models_with_variables)
 
-    plot_uncertainties_small_multiples(trace, results, show_distance=True)
-    plot_uncertainties_small_multiples(trace, results, show_distance=False)
-    plot_uncertainties_overlaid(trace, results)
+    if "uncertainties" in phases:
+        plot_uncertainties_small_multiples(trace, results, show_distance=False)
+        plot_uncertainties_overlaid(trace, results)
 
-    big_step_sensitivities = calculate_big_step_sensitivities(
-        trace, models_with_variables
-    )
-    angle_sensitivities = calculate_angle_sensitivities(trace, models_with_variables)
-    ordering = dict(
-        map(lambda x: (x[1], x[0]), enumerate(angle_sensitivities["names"]))
-    )
+    if "regressions" in phases or "distances" in phases or "small steps" in phases:
+        angles, taus, footrules = compute_distances(models_with_variables, trace)
+        trace.add_values({"angle": angles, "tau": taus, "footrule": footrules})
 
-    plot_big_step_regressions(ordering, models_with_variables, df)
-    plot_angle_regressions(ordering, models_with_variables, df)
+        df = pm.trace_to_dataframe(trace)
+        # Have to add these manually because pymc3 doesn't seem to do so in the line above
+        df["angle"] = angles
+        df["tau"] = taus
+        df["footrule"] = footrules
 
-    plot_sensitivities(
-        "max", "overall ranking", 0, angle_sensitivities, should_trim_prefix=False
-    )
-    for charity, sensitivities in big_step_sensitivities.items():
-        plot_sensitivities("big", charity, 0, sensitivities)
-    if include_small_steps:
+        angle_sensitivities = calculate_angle_sensitivities(
+            trace, models_with_variables
+        )
+        ordering = dict(
+            map(lambda x: (x[1], x[0]), enumerate(angle_sensitivities["names"]))
+        )
+
+    if "regressions" in phases:
+        plot_big_step_regressions(ordering, models_with_variables, df)
+
+    if "sensitivities" in phases:
+        big_step_sensitivities = calculate_big_step_sensitivities(
+            trace, models_with_variables
+        )
+        for charity, sensitivities in big_step_sensitivities.items():
+            plot_sensitivities("big", charity, 0, sensitivities)
+
+    if "distances" in phases:
+        plot_uncertainties_small_multiples(trace, results, show_distance=True)
+        plot_angle_regressions(ordering, models_with_variables, df)
+        plot_sensitivities(
+            "max", "overall ranking", 0, angle_sensitivities, should_trim_prefix=False
+        )
+
+    if "small steps" in phases:
         small_step_sensitivities = calculate_small_step_sensitivities(
             trace, models_with_variables
         )
