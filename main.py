@@ -125,7 +125,7 @@ def compute_distances(models, trace):
 # Uncertainty
 
 
-def plot_uncertainties_small_multiples(trace, results, show_distance):
+def plot_uncertainties_small_multiples(trace, results, save_plots, show_distance):
     rows, cols = grid_dims(len(results))
 
     fig_height = 3 * (1 + rows) if show_distance else 3 * rows
@@ -175,11 +175,12 @@ def plot_uncertainties_small_multiples(trace, results, show_distance):
 
     fig.patch.set_alpha(0)
     distance_str = "-distances" if show_distance else ""
-    plt.savefig("plots/uncertainties-small-multiples" + distance_str + ".png")
+    if save_plots:
+        plt.savefig("plots/uncertainties-small-multiples" + distance_str + ".png")
     # fig.tight_layout(rect=[0, 0.01, 1, 0.97])
 
 
-def plot_uncertainties_overlaid(trace, results):
+def plot_uncertainties_overlaid(trace, results, save_plots):
     fig = plt.figure(tight_layout=True)
     for charity, var in results.items():
         mean = np.mean(trace[var])
@@ -187,13 +188,14 @@ def plot_uncertainties_overlaid(trace, results):
         ax = sns.kdeplot(normed, label=charity, gridsize=500)
         ax.set_xlim(-0, 2)
     fig.patch.set_alpha(0)
-    plt.savefig("plots/uncertainties-overlaid.png")
+    if save_plots:
+        plt.savefig("plots/uncertainties-overlaid.png")
 
 
 # Regressions
 
 
-def plot_regressions(typ, ordering, charity, df, spec, should_trim_prefix=True):
+def plot_regressions(typ, ordering, charity, df, spec, save_plots, should_trim_prefix=True):
     combos = list(product(spec.ins, spec.outs))
     # The `ordering` dict only includes input variables (rather than intermediate calculations) so we don't worry about sorting anything else
     combos_sorted = (
@@ -229,8 +231,9 @@ def plot_regressions(typ, ordering, charity, df, spec, should_trim_prefix=True):
 
     # fig.tight_layout()
     out_str = "-".join([sanitize_label(k) for k in spec.outs])
-    fig.patch.set_alpha(0)
-    plt.savefig("plots/regressions-" + charity + "-" + typ + "-" + out_str + ".png")
+    if save_plots:
+        fig.patch.set_alpha(0)
+        plt.savefig("plots/regressions-" + charity + "-" + typ + "-" + out_str + ".png")
 
 
 def plot_big_step_regressions(ordering, models_with_variables, df):
@@ -334,26 +337,28 @@ def sensitivities_to_dataframe(sa, should_trim_prefix=True):
     return DataFrame(S1), DataFrame(delta)
 
 
-def plot_sensitivities(size, charity, index, sa, should_trim_prefix=True):
+def plot_sensitivities(size, charity, index, sa, save_plots, should_trim_prefix=True):
     S1, delta = sensitivities_to_dataframe(sa, should_trim_prefix)
     fig = plt.figure(tight_layout=True, figsize=(6, ceil(len(sa["names"]) / 3)))
     sns.pointplot(x="delta sensitivity", y="variable", data=delta, join=False)
-    fig.patch.set_alpha(0)
-    plt.savefig(
-        "plots/sensitivity-" + size + "-" + charity + "-" + str(index) + "-delta.png"
-    )
+    if save_plots:
+        fig.patch.set_alpha(0)
+        plt.savefig(
+            "plots/sensitivity-" + size + "-" + charity + "-" + str(index) + "-delta.png"
+        )
     fig = plt.figure(figsize=(6, ceil(len(sa["names"]) / 3)))
     sns.pointplot(x="S1 sensitivity", y="variable", data=S1, join=False)
-    fig.patch.set_alpha(0)
-    plt.savefig(
-        "plots/sensitivity-" + size + "-" + charity + "-" + str(index) + "-s1.png"
-    )
+    if save_plots:
+        fig.patch.set_alpha(0)
+        plt.savefig(
+            "plots/sensitivity-" + size + "-" + charity + "-" + str(index) + "-s1.png"
+        )
 
 
 # Main
 
 
-def main(params, num_samples, phases):
+def main(params, num_samples, phases, save_plots=False):
     sns.set(style="darkgrid")
 
     model_context = pm.Model()
@@ -370,8 +375,10 @@ def main(params, num_samples, phases):
     results = results_from_models(models_with_variables)
 
     if "uncertainties" in phases:
-        plot_uncertainties_small_multiples(trace, results, show_distance=False)
-        plot_uncertainties_overlaid(trace, results)
+        plot_uncertainties_small_multiples(
+            trace, results, save_plots, show_distance=False
+        )
+        plot_uncertainties_overlaid(trace, results, save_plots)
 
     if "regressions" in phases or "distances" in phases or "small steps" in phases:
         angles, taus, footrules = compute_distances(models_with_variables, trace)
@@ -391,27 +398,34 @@ def main(params, num_samples, phases):
         )
 
     if "regressions" in phases:
-        plot_big_step_regressions(ordering, models_with_variables, df)
+        plot_big_step_regressions(ordering, models_with_variables, df, save_plots)
 
     if "sensitivities" in phases:
         big_step_sensitivities = calculate_big_step_sensitivities(
             trace, models_with_variables
         )
         for charity, sensitivities in big_step_sensitivities.items():
-            plot_sensitivities("big", charity, 0, sensitivities)
+            plot_sensitivities("big", charity, 0, sensitivities, save_plots)
 
     if "distances" in phases:
-        plot_uncertainties_small_multiples(trace, results, show_distance=True)
-        plot_angle_regressions(ordering, models_with_variables, df)
+        plot_uncertainties_small_multiples(
+            trace, results, save_plots, show_distance=True
+        )
+        plot_angle_regressions(ordering, models_with_variables, df, save_plots)
         plot_sensitivities(
-            "max", "overall ranking", 0, angle_sensitivities, should_trim_prefix=False
+            "max",
+            "overall ranking",
+            0,
+            angle_sensitivities,
+            save_plots,
+            should_trim_prefix=False,
         )
 
     if "small steps" in phases:
         small_step_sensitivities = calculate_small_step_sensitivities(
             trace, models_with_variables
         )
-        plot_small_step_regressions(ordering, models_with_variables, df)
+        plot_small_step_regressions(ordering, models_with_variables, df, save_plots)
         for charity, sensitivities in small_step_sensitivities.items():
             for i, s in enumerate(sensitivities):
-                plot_sensitivities("small", charity, i, s)
+                plot_sensitivities("small", charity, i, s, save_plots)
