@@ -233,7 +233,7 @@ def plot_regressions(typ, ordering, charity, df, spec, save_plots, should_trim_p
     out_str = "-".join([sanitize_label(k) for k in spec.outs])
     if save_plots:
         fig.patch.set_alpha(0)
-        plt.savefig("plots/regressions-" + charity + "-" + typ + "-" + out_str + ".png")
+        plt.savefig("plots/regressions-" + typ + "-" + charity + "-" + out_str + ".png")
 
 
 def plot_big_step_regressions(ordering, models_with_variables, df):
@@ -337,23 +337,18 @@ def sensitivities_to_dataframe(sa, should_trim_prefix=True):
     return DataFrame(S1), DataFrame(delta)
 
 
-def plot_sensitivities(size, charity, index, sa, save_plots, should_trim_prefix=True):
+def plot_sensitivities(namer, sa, save_plots, should_trim_prefix=True):
     S1, delta = sensitivities_to_dataframe(sa, should_trim_prefix)
     fig = plt.figure(tight_layout=True, figsize=(6, ceil(len(sa["names"]) / 3)))
     sns.pointplot(x="delta sensitivity", y="variable", data=delta, join=False)
     if save_plots:
         fig.patch.set_alpha(0)
-        plt.savefig(
-            "plots/sensitivity-" + size + "-" + charity + "-" + str(index) + "-delta.png"
-        )
+        plt.savefig(namer("delta"))
     fig = plt.figure(figsize=(6, ceil(len(sa["names"]) / 3)))
     sns.pointplot(x="S1 sensitivity", y="variable", data=S1, join=False)
     if save_plots:
         fig.patch.set_alpha(0)
-        plt.savefig(
-            "plots/sensitivity-" + size + "-" + charity + "-" + str(index) + "-s1.png"
-        )
-
+        plt.savefig(namer("s1"))
 
 # Main
 
@@ -405,17 +400,19 @@ def main(params, num_samples, phases, save_plots=False):
             trace, models_with_variables
         )
         for charity, sensitivities in big_step_sensitivities.items():
-            plot_sensitivities("big", charity, 0, sensitivities, save_plots)
+            def namer(sensitivity_type):
+                return "plots/sensitivity-big-" + charity + "-" + sensitivity_type + ".png"
+            plot_sensitivities(namer, sensitivities, save_plots)
 
     if "distances" in phases:
         plot_uncertainties_small_multiples(
             trace, results, save_plots, show_distance=True
         )
         plot_angle_regressions(ordering, models_with_variables, df, save_plots)
+        def namer(sensitivity_type):
+            return "plots/sensitivity-max-" + sensitivity_type + ".png"
         plot_sensitivities(
-            "max",
-            "overall ranking",
-            0,
+            namer,
             angle_sensitivities,
             save_plots,
             should_trim_prefix=False,
@@ -428,4 +425,6 @@ def main(params, num_samples, phases, save_plots=False):
         plot_small_step_regressions(ordering, models_with_variables, df, save_plots)
         for charity, sensitivities in small_step_sensitivities.items():
             for i, s in enumerate(sensitivities):
-                plot_sensitivities("small", charity, i, s, save_plots)
+                def namer(sensitivity_type):
+                    return "plots/sensitivity-small-" + charity + "-" + str(i) + "-" + sensitivity_type + ".png"
+                plot_sensitivities(namer, s, save_plots)
