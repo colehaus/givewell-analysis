@@ -47,7 +47,7 @@ coverage_adjustment_givewell = {
     "SMC: percent of targeted receiving at least 2 rounds": 0.83,
     "SMC: percent of targeted receiving at least 3 rounds": 0.71,
     "SMC: percent of targeted receiving all 4 rounds": 0.55,
-    "SMC: coverage in trials in meta analysis": 0.90,
+    "SMC: coverage in trials in meta-analysis": 0.90,
 }
 
 

@@ -266,14 +266,14 @@ def plot_small_step_regressions(ordering, models_with_variables, df, save_plots)
             )
 
 
-def plot_angle_regressions(ordering, models_with_variables, df, save_plots):
+def plot_distance_regressions(ordering, models_with_variables, df, outcome, save_plots):
     params = all_params_from_models(models_with_variables)
     plot_regressions(
         "max",
         ordering,
-        "overall ranking",
+        outcome,
         df,
-        ChartSpec(ins=params, outs=["angle"]),
+        ChartSpec(ins=params, outs=[outcome]),
         save_plots,
         should_trim_prefix=False,
     )
@@ -313,10 +313,10 @@ def calculate_big_step_sensitivities(trace, models):
     }
 
 
-def calculate_angle_sensitivities(trace, models_with_variables):
+def calculate_distance_sensitivities(trace, models_with_variables, outcome):
     params = all_params_from_models(models_with_variables)
     return sort_sensitivities(
-        calculate_sensitivities(trace, ChartSpec(ins=params, outs=["angle"]))[0]
+        calculate_sensitivities(trace, ChartSpec(ins=params, outs=[outcome]))[0]
     )
 
 
@@ -349,12 +349,12 @@ def sensitivities_to_dataframe(sa, should_trim_prefix=True):
 
 def plot_sensitivities(namer, sa, save_plots, should_trim_prefix=True):
     S1, delta = sensitivities_to_dataframe(sa, should_trim_prefix)
-    fig = plt.figure(tight_layout=True, figsize=(6, ceil(len(sa["names"]) / 3)))
+    fig = plt.figure(tight_layout=True, figsize=(8, ceil(len(sa["names"]) / 3)))
     sns.pointplot(x="delta sensitivity", y="variable", data=delta, join=False)
     if save_plots:
         fig.patch.set_alpha(0)
         plt.savefig(namer("delta"))
-    fig = plt.figure(figsize=(6, ceil(len(sa["names"]) / 3)))
+    fig = plt.figure(tight_layout=True, figsize=(8, ceil(len(sa["names"]) / 3)))
     sns.pointplot(x="S1 sensitivity", y="variable", data=S1, join=False)
     if save_plots:
         fig.patch.set_alpha(0)
@@ -396,8 +396,8 @@ def main(params, num_samples, phases, save_plots=False):
         df["tau"] = taus
         df["footrule"] = footrules
 
-        angle_sensitivities = calculate_angle_sensitivities(
-            trace, models_with_variables
+        angle_sensitivities = calculate_distance_sensitivities(
+            trace, models_with_variables, "angle"
         )
         ordering = dict(
             map(lambda x: (x[1], x[0]), enumerate(angle_sensitivities["names"]))
@@ -418,19 +418,45 @@ def main(params, num_samples, phases, save_plots=False):
                 )
 
             plot_sensitivities(namer, sensitivities, save_plots)
+            print(charity, "sum of deltas", sum(sensitivities["delta"]))
 
     if "distances" in phases:
         plot_uncertainties_small_multiples(
             trace, results, save_plots, show_distance=True
         )
-        plot_angle_regressions(ordering, models_with_variables, df, save_plots)
+        plot_distance_regressions(ordering, models_with_variables, df, "angle", save_plots)
+        plot_distance_regressions(ordering, models_with_variables, df, "tau", save_plots)
+        plot_distance_regressions(ordering, models_with_variables, df, "footrule", save_plots)
 
-        def namer(sensitivity_type):
-            return "plots/sensitivity-max-" + sensitivity_type + ".png"
+        def namer(outcome):
+            return (
+                lambda sensitivity_type: "plots/sensitivity-max-"
+                + outcome
+                + "-"
+                + sensitivity_type
+                + ".png"
+            )
 
         plot_sensitivities(
-            namer, angle_sensitivities, save_plots, should_trim_prefix=False
+            namer("angle"), angle_sensitivities, save_plots, should_trim_prefix=False
         )
+
+        tau_sensitivities = calculate_distance_sensitivities(
+            trace, models_with_variables, "tau"
+        )
+        plot_sensitivities(
+            namer("tau"), tau_sensitivities, save_plots, should_trim_prefix=False
+        )
+        footrule_sensitivities = calculate_distance_sensitivities(
+            trace, models_with_variables, "footrule"
+        )
+        plot_sensitivities(
+            namer("footrule"),
+            footrule_sensitivities,
+            save_plots,
+            should_trim_prefix=False,
+        )
+        print("angle", "sum of deltas", sum(angle_sensitivities["delta"]))
 
     if "small steps" in phases:
         small_step_sensitivities = calculate_small_step_sensitivities(
