@@ -456,7 +456,15 @@ def main(params, num_samples, phases, save_plots=False):
             save_plots,
             should_trim_prefix=False,
         )
-        print("angle", "sum of deltas", sum(angle_sensitivities["delta"]))
+        tau_ranking = tau_sensitivities["names"]
+        footrule_ranking = footrule_sensitivities["names"]
+        angle_ranking = angle_sensitivities["names"]
+        print("tau-footrule by tau", kendall_tau(tau_ranking, footrule_ranking))
+        print("tau-footrule by footrule", spearman_footrule(tau_ranking, footrule_ranking))
+        print("tau-angle by tau", kendall_tau(tau_ranking, angle_ranking))
+        print("tau-angle by footrule", spearman_footrule(tau_ranking, angle_ranking))
+        print("footrule-angle by tau", kendall_tau(footrule_ranking, angle_ranking))
+        print("footrule-angle by footrule", spearman_footrule(footrule_ranking, angle_ranking))
 
     if "small steps" in phases:
         small_step_sensitivities = calculate_small_step_sensitivities(
