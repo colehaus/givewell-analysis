@@ -185,6 +185,7 @@ def plot_uncertainties_overlaid(trace, results, save_plots):
     for charity, var in results.items():
         mean = np.mean(trace[var])
         normed = trace[var] / mean
+        print(charity, "mean", mean)
         ax = sns.kdeplot(normed, label=charity, gridsize=500)
         ax.set_xlim(-0, 2)
     fig.patch.set_alpha(0)
