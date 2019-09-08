@@ -44,24 +44,28 @@ def long_term_income_effects(
 
 
 dtw_givewell = {
+    "DTW: proportion of deworming going to children": 1.00,
     "DTW: worm intensity adjustment": 0.12,
     "DTW: cost per capita per annum": 0.61,
     "DTW: expected value from lev/fun": 0.71,
 }
 
 sci_givewell = {
+    "SCI: proportion of deworming going to children": 0.81,
     "SCI: worm intensity adjustment": 0.09,
     "SCI: cost per capita per annum": 0.99,
     "SCI: expected value from lev/fun": 1.31,
 }
 
 sightsavers_givewell = {
+    "SS: proportion of deworming going to children": 1.00,
     "SS: worm intensity adjustment": 0.09,
     "SS: cost per capita per annum": 0.95,
     "SS: expected value from lev/fun": 0.91,
 }
 
 end_givewell = {
+    "END: proportion of deworming going to children": 0.81,
     "END: worm intensity adjustment": 0.07,
     "END: cost per capita per annum": 0.81,
     "END: expected value from lev/fun": 0.39,
@@ -70,13 +74,13 @@ end_givewell = {
 
 def charity_specific(
     name,
+    proportion_of_deworming_going_to_children,
     adjusted_benefits_per_yr_of_deworming_in_ln_consumption,
     worm_intensity_adjustment,
     value_of_increasing_ln_consumption_per_capita_per_annum,
     cost_per_capita_per_annum,
     expected_value_from_levfun,
 ):
-    proportion_of_deworming_going_to_children = 1.00
     present_value_of_lifetime_benefits_from_year_of_deworming = (
         adjusted_benefits_per_yr_of_deworming_in_ln_consumption
         * proportion_of_deworming_going_to_children
