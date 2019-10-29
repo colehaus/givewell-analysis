@@ -58,10 +58,13 @@ from tree import (
 
 
 def inline_params(model, params):
+    """Converts shorthand model tree with params identified by lists of strings to use actual parameter dictionaries. (The shorthand structure also allows sharing of parameters across models without duplication.)"""
     return map_tree(partial(apply_if_list, partial(lookup_by_path, params)), model)
 
 
 def prune_inputs_in_model(model):
+    """Inlining (see above) might bring in unneeded parameters. Remove them."""
+
     def inner(fn, args):
         models, params = partition(is_model, args)
         return Model(
@@ -77,6 +80,7 @@ def prune_inputs_in_model(model):
 
 
 def register_model(model_context, model):
+    """Register all final and intermediate outputs from model as `Deterministic`s in PyMC3."""
 
     model_with_registered_params = map_tree(
         partial(apply_if_dict, partial(params_to_distribution, model_context)), model
@@ -90,6 +94,8 @@ def register_model(model_context, model):
 
 
 def register_outputs(model_context, fn, args_list):
+    """Register of outputs of function as `Deterministic`s in PyMC3."""
+
     def inner(k, v):
         try:
             return model_context.__getitem__(k)
@@ -127,6 +133,7 @@ def compute_distances(models, trace):
 
 def plot_uncertainties_small_multiples(trace, results, save_plots, show_distance):
     rows, cols = grid_dims(len(results))
+    """Plot output distributions based on input distributions."""
 
     fig_height = 3 * (1 + rows) if show_distance else 3 * rows
     fig = plt.figure(tight_layout=True, figsize=(3 * cols, fig_height))
@@ -181,6 +188,8 @@ def plot_uncertainties_small_multiples(trace, results, save_plots, show_distance
 
 
 def plot_uncertainties_overlaid(trace, results, save_plots):
+    """Plot output distributions based on input distributions."""
+
     fig = plt.figure(tight_layout=True)
     for charity, var in results.items():
         mean = np.mean(trace[var])
@@ -199,6 +208,7 @@ def plot_uncertainties_overlaid(trace, results, save_plots):
 def plot_regressions(
     typ, ordering, charity, df, spec, save_plots, should_trim_prefix=True
 ):
+    """Plot regressions between sampled input parameter values and corresponding model outputs. Useful for visual sensitivity analysis."""
     combos = list(product(spec.ins, spec.outs))
     # The `ordering` dict only includes input variables (rather than intermediate calculations) so we don't worry about sorting anything else
     combos_sorted = (
@@ -240,6 +250,7 @@ def plot_regressions(
 
 
 def plot_big_step_regressions(ordering, models_with_variables, df, save_plots):
+    """Big steps compute one model from end-to-end inputs to final outputs."""
     for charity, model in models_with_variables.items():
         plot_regressions(
             "big", ordering, charity, df, big_step_chart_spec(model), save_plots
@@ -247,6 +258,7 @@ def plot_big_step_regressions(ordering, models_with_variables, df, save_plots):
 
 
 def plot_small_step_regressions(ordering, models_with_variables, df, save_plots):
+    """Small steps include the intermediate output from the component functions in a model (if any)."""
     for charity, model in models_with_variables.items():
         for spec in small_step_chart_specs(model):
             # This is a hacky way to remove the second unwanted (for graphing) output from one of the calculations
@@ -268,6 +280,7 @@ def plot_small_step_regressions(ordering, models_with_variables, df, save_plots)
 
 
 def plot_distance_regressions(ordering, models_with_variables, df, outcome, save_plots):
+    """Plot regressions between sampled input parameter values and distance metrics across all models. Useful for visual sensitivity analysis."""
     params = all_params_from_models(models_with_variables)
     plot_regressions(
         "max",
@@ -284,6 +297,7 @@ def plot_distance_regressions(ordering, models_with_variables, df, outcome, save
 
 
 def calculate_sensitivities(trace, spec):
+    """Calculates delta moment-independent sensitivities for specified inputs and outputs."""
     ins_list = list(spec.ins)
     ins = np.stack([trace[i] for i in ins_list], axis=1)
     problem = {"num_vars": len(spec.ins), "names": ins_list}
@@ -322,6 +336,8 @@ def calculate_distance_sensitivities(trace, models_with_variables, outcome):
 
 
 def sensitivities_to_dataframe(sa, should_trim_prefix=True):
+    """Munging to translate the SALib results into data frames."""
+
     def trim(s):
         if should_trim_prefix:
             return trim_prefix(s)
@@ -366,6 +382,7 @@ def plot_sensitivities(namer, sa, save_plots, should_trim_prefix=True):
 
 
 def main(params, num_samples, phases, save_plots=False):
+    """`params` are inputs to GiveWell's models. `phases` is a set of keywords to control which analysis and plotting steps are actually performed."""
     sns.set(style="darkgrid")
 
     model_context = pm.Model()
@@ -425,9 +442,15 @@ def main(params, num_samples, phases, save_plots=False):
         plot_uncertainties_small_multiples(
             trace, results, save_plots, show_distance=True
         )
-        plot_distance_regressions(ordering, models_with_variables, df, "angle", save_plots)
-        plot_distance_regressions(ordering, models_with_variables, df, "tau", save_plots)
-        plot_distance_regressions(ordering, models_with_variables, df, "footrule", save_plots)
+        plot_distance_regressions(
+            ordering, models_with_variables, df, "angle", save_plots
+        )
+        plot_distance_regressions(
+            ordering, models_with_variables, df, "tau", save_plots
+        )
+        plot_distance_regressions(
+            ordering, models_with_variables, df, "footrule", save_plots
+        )
 
         def namer(outcome):
             return (
@@ -461,11 +484,16 @@ def main(params, num_samples, phases, save_plots=False):
         footrule_ranking = footrule_sensitivities["names"]
         angle_ranking = angle_sensitivities["names"]
         print("tau-footrule by tau", kendall_tau(tau_ranking, footrule_ranking))
-        print("tau-footrule by footrule", spearman_footrule(tau_ranking, footrule_ranking))
+        print(
+            "tau-footrule by footrule", spearman_footrule(tau_ranking, footrule_ranking)
+        )
         print("tau-angle by tau", kendall_tau(tau_ranking, angle_ranking))
         print("tau-angle by footrule", spearman_footrule(tau_ranking, angle_ranking))
         print("footrule-angle by tau", kendall_tau(footrule_ranking, angle_ranking))
-        print("footrule-angle by footrule", spearman_footrule(footrule_ranking, angle_ranking))
+        print(
+            "footrule-angle by footrule",
+            spearman_footrule(footrule_ranking, angle_ranking),
+        )
 
     if "small steps" in phases:
         small_step_sensitivities = calculate_small_step_sensitivities(
